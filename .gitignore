@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# Local database — never commit these
+/data/
+*.db
+*.db-shm
+*.db-wal
