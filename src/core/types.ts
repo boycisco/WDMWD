@@ -50,3 +50,48 @@ export interface Finding {
   evidenceIds: string[];
   limitations?: string[];
 }
+
+// ─── Transfers ──────────────────────────────────────────────────
+
+/** Categories that map to Alchemy's `alchemy_getAssetTransfers` categories. */
+export type TransferCategory = "external" | "erc20" | "erc721" | "erc1155";
+
+/**
+ * Exact token amount.
+ *
+ * `raw` is a decimal string of the integer amount — e.g. 1.5 ETH is
+ * "1500000000000000000". We deliberately use strings, not numbers:
+ * `number` cannot represent values above 2^53 exactly, and any float
+ * arithmetic silently corrupts financial amounts (spec §7.3).
+ *
+ * Consumers that need to do arithmetic must use `BigInt(raw)`.
+ * `formatted` is the human-readable form for assistant output.
+ */
+export interface TokenAmount {
+  raw: string;
+  formatted: string;
+  decimals: number;
+  symbol?: string;
+  name?: string;
+}
+
+/**
+ * A normalized transfer, direction-agnostic at the transport layer.
+ *
+ * `direction` is set by the consumer (wallet/activity) relative to the
+ * address being investigated. The Alchemy adapter itself cannot know
+ * which side of the transfer is "ours" — that depends on the caller.
+ */
+export interface Transfer {
+  chainId: ChainId;
+  hash: TxHash;
+  blockNumber: number;
+  blockTimestamp: string;
+  from: Address;
+  to: Address;
+  category: TransferCategory;
+  contractAddress?: Address;
+  tokenId?: string;
+  amount: TokenAmount;
+  direction: "in" | "out";
+}
