@@ -15,6 +15,8 @@ import { runAgent, type AgentEvent } from "./loop";
 export interface StartAgentInput {
   userMessage: string;
   history?: Message[];
+  /** Appended after the base system prompt — used to inject context refs. */
+  systemPromptSuffix?: string;
   model?: Model;
   signal?: AbortSignal;
 }
@@ -26,9 +28,13 @@ export function startAgent(input: StartAgentInput): AsyncGenerator<AgentEvent> {
       ? createGeminiModel()
       : createOpenAIModel());
 
+  const systemPrompt = input.systemPromptSuffix
+    ? `${SYSTEM_PROMPT}\n\n${input.systemPromptSuffix}`
+    : SYSTEM_PROMPT;
+
   return runAgent({
     model,
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt,
     history: input.history ?? [],
     userMessage: input.userMessage,
     modelName:

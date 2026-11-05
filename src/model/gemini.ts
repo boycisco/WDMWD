@@ -5,12 +5,14 @@
  *   1. Role "assistant" → "model".
  *   2. Tool calls arrive as `functionCalls` (not `tool_calls`).
  *   3. Tool results go back as `functionResponse` parts inside a "user" turn.
- *   4. Gemini does NOT stream partial function-call arguments; full
- *      arguments arrive in a single chunk.
+ *   4. Gemini does NOT stream partial function-call arguments.
+ *   5. Gemini 3.x thinking models attach an opaque `thoughtSignature` to
+ *      each functionCall part. When manually reconstructing history, we
+ *      must echo it back as a sibling field on the same part, or Gemini
+ *      rejects the next turn with 400 "missing thought_signature".
  *
  * Transient 503/429 errors are retried with exponential backoff per
- * Google's official guidance. Capacity spikes on free-tier models are
- * routine; surfacing them as hard failures would break the chat UX.
+ * Google's official guidance.
  */
 
 import { GoogleGenAI, type Content, type Part } from "@google/genai";
@@ -86,12 +88,21 @@ function toGeminiContents(messages: Message[]): {
       contents.push({ role: "user", parts: [part] });
       continue;
     }
+
     // Assistant / model turn
     const parts: Part[] = [];
     if (m.content.length > 0) parts.push({ text: m.content });
     if ("toolCalls" in m && m.toolCalls.length > 0) {
       for (const tc of m.toolCalls) {
-        parts.push({ functionCall: { name: tc.name, args: tc.arguments, id: tc.id } });
+        const part: Part = {
+          functionCall: { name: tc.name, args: tc.arguments, id: tc.id },
+        };
+        if (tc.thoughtSignature) {
+          // Sibling field per Gemini docs. Parallel siblings that were
+          // returned unsigned stay unsigned — do not synthesize one.
+          part.thoughtSignature = tc.thoughtSignature;
+        }
+        parts.push(part);
       }
     }
     if (parts.length > 0) contents.push({ role: "model", parts });
@@ -179,12 +190,51 @@ export function createGeminiModel(opts: GeminiModelOptions = {}): Model {
               args?: Record<string, unknown>;
               id?: string;
             }>;
+            candidates?: Array<{
+              content?: {
+                parts?: Array<{
+                  text?: string;
+                  functionCall?: {
+                    name: string;
+                    args?: Record<string, unknown>;
+                    id?: string;
+                  };
+                  thoughtSignature?: string;
+                }>;
+              };
+            }>;
           };
+
           if (c.text) {
             content += c.text;
             yield { deltaText: c.text };
           }
-          if (c.functionCalls) {
+
+          // Prefer the raw `candidates[0].content.parts` path because it
+          // preserves `thoughtSignature` on each functionCall part. The
+          // convenience `.functionCalls` accessor strips it.
+          const parts = c.candidates?.[0]?.content?.parts;
+          if (parts) {
+            for (let i = 0; i < parts.length; i++) {
+              const p = parts[i]!;
+              if (!p.functionCall) continue;
+              const fc = p.functionCall;
+              yield {
+                deltaToolCall: {
+                  index: i,
+                  id: fc.id,
+                  name: fc.name,
+                  argumentFragment: JSON.stringify(fc.args ?? {}),
+                },
+              };
+              toolCalls.push({
+                id: fc.id ?? `call_${i}_${fc.name}`,
+                name: fc.name,
+                arguments: (fc.args ?? {}) as Record<string, unknown>,
+                thoughtSignature: p.thoughtSignature,
+              });
+            }
+          } else if (c.functionCalls) {
             for (let i = 0; i < c.functionCalls.length; i++) {
               const fc = c.functionCalls[i]!;
               yield {

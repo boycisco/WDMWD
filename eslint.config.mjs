@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Test files legitimately use `any` to stub provider SDKs
+  // (Alchemy, Gemini) whose types are either too heavy or not exported.
+  // Restricting `any` in application code remains fully enforced.
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

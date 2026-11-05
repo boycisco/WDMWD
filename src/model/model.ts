@@ -43,6 +43,16 @@ export interface ToolCall {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
+  /**
+   * Opaque replay token emitted by Gemini 3.x thinking models. Must be
+   * echoed back verbatim on the same functionCall part in the next turn,
+   * or Gemini rejects the request with "Function call is missing a
+   * thought_signature". Ignored by other providers.
+   *
+   * Per Gemini docs: for parallel function calls, only the first
+   * functionCall part carries a signature; siblings stay unsigned.
+   */
+  thoughtSignature?: string;
 }
 
 // ─── Inputs / outputs ──────────────────────────────────────────
