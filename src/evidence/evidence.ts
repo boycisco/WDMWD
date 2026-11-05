@@ -117,3 +117,62 @@ export function dedupeEvidence(items: Evidence[]): Evidence[] {
   }
   return out;
 }
+
+// ─── Transaction evidence ──────────────────────────────────────
+
+export interface TransactionEvidenceInput {
+  chainId: ChainId;
+  hash: TxHash;
+  blockNumber: number | null;
+  blockTimestamp: string;
+  from: Address;
+  to: Address | null;
+  status: "success" | "reverted" | "unknown";
+  /** Already-formatted ETH value transferred. */
+  valueFormatted: string;
+  valueRaw: string;
+  /** Fee paid in ETH, formatted. `null` if no receipt. */
+  feeEth: string | null;
+  gasUsed: string | null;
+}
+
+/**
+ * Build evidence for a transaction investigation.
+ *
+ * Unlike the wallet case (one evidence per transfer — because there are
+ * hundreds of transfers), a transaction investigation produces **one**
+ * evidence entry. The transaction hash itself is the natural unit of
+ * traceability: every claim about this tx cites the same hash.
+ */
+export function transactionToEvidence(
+  t: TransactionEvidenceInput,
+  retrievedAt: string = new Date().toISOString(),
+): Evidence {
+  const key = [
+    "tx",
+    t.chainId,
+    t.hash,
+    t.from,
+    t.to ?? "null",
+    t.status,
+  ].join(":");
+  return {
+    id: evidenceId(key),
+    chainId: t.chainId,
+    type: "receipt",
+    classification: t.status === "unknown" ? "unknown" : "confirmed",
+    transactionHash: t.hash,
+    blockNumber: t.blockNumber ?? undefined,
+    blockTimestamp: t.blockTimestamp,
+    addresses: t.to ? [t.from, t.to] : [t.from],
+    data: {
+      status: t.status,
+      valueFormatted: t.valueFormatted,
+      valueRaw: t.valueRaw,
+      feeEth: t.feeEth,
+      gasUsed: t.gasUsed,
+    },
+    source: `rpc:${t.chainId}`,
+    retrievedAt,
+  };
+}

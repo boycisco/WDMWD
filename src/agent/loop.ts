@@ -112,9 +112,14 @@ export async function* runAgent(
     const toolCalls = finalOutput.toolCalls;
 
     if (toolCalls.length === 0) {
+      // Use `turnText` (accumulated deltas — what the SSE client already
+      // received) rather than `finalOutput.content` (the model's own
+      // accumulator). Some provider SDKs — Gemini 3.x in particular —
+      // trim whitespace inconsistently between `.text` and streamed
+      // deltas, producing content that doesn't match what was streamed.
       yield {
         type: "message.complete",
-        content: finalOutput.content || turnText,
+        content: turnText || finalOutput.content,
       };
       return;
     }

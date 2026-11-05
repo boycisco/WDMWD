@@ -14,6 +14,7 @@ import { z } from "zod";
 import { ValidationError } from "@/core/errors";
 import type { ToolDefinition } from "@/model/model";
 import { investigateWallet } from "@/wallet/investigate";
+import { investigateTransaction } from "@/transaction/investigate";
 import { isValidAddress } from "@/wallet/wallet";
 
 const AddressSchema = z
@@ -105,11 +106,102 @@ async function handleWallet(args: unknown): Promise<ToolResult> {
       topOutgoingCounterparties: investigation.profile.topOutgoingCounterparties,
       topContracts: investigation.profile.topContracts,
       findings: findingSummaries,
+      // NOTE: the flat evidenceIds array is deliberately omitted.
+      // Per-finding evidence IDs (in `findings[].evidenceIds`) are what
+      // the model cites; the full list is transmitted separately via the
+      // `evidence` SSE event for the frontend. Sending 200 raw IDs back
+      // to the model bloats every request by ~6KB with no benefit.
       evidenceCount: investigation.evidence.length,
-      evidenceIds: investigation.evidence.map((e) => e.id),
     },
   };
 }
+
+// ─── Transaction tool ──────────────────────────────────────────
+
+const TxHashSchema = z
+  .string()
+  .regex(/^0x[0-9a-fA-F]{64}$/, "Invalid transaction hash");
+
+const TransactionArgsSchema = z.object({
+  hash: TxHashSchema,
+  chainId: ChainIdSchema,
+});
+
+export const transactionTool: ToolDefinition = {
+  name: "transaction",
+  description:
+    "Investigate a single onchain transaction by hash. Returns sender, recipient (and whether it's a wallet or contract), success/reverted status, ETH value moved, gas cost, and event log summary. Use when the user asks about a specific transaction hash, wants to know what happened in a transaction, or asks who sent or received funds in a particular tx.",
+  parameters: {
+    type: "object",
+    properties: {
+      hash: {
+        type: "string",
+        description: "Transaction hash (0x followed by 64 hex chars).",
+      },
+      chainId: {
+        type: "number",
+        description: "Chain ID. Base mainnet is 8453.",
+        default: 8453,
+      },
+    },
+    required: ["hash"],
+    additionalProperties: false,
+  },
+};
+
+async function handleTransaction(args: unknown): Promise<ToolResult> {
+  const parsed = TransactionArgsSchema.safeParse(args);
+  if (!parsed.success) {
+    throw new ValidationError(
+      `Invalid transaction tool arguments: ${parsed.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}`,
+    );
+  }
+  const { hash, chainId } = parsed.data;
+
+  const inv = await investigateTransaction({ chainId, hash });
+
+  const findingSummaries = inv.findings.map((f) => ({
+    id: f.id,
+    title: f.title,
+    explanation: f.explanation,
+    classification: f.classification,
+    evidenceIds: f.evidenceIds,
+    limitations: f.limitations,
+  }));
+
+  const status = inv.receipt?.status ?? "unknown";
+  const recipientLabel =
+    inv.recipientType === "deployment"
+      ? "a contract deployment"
+      : inv.recipientType === "contract"
+        ? "a contract"
+        : inv.recipientType === "eoa"
+          ? "an EOA"
+          : "of unknown type";
+
+  return {
+    ok: true,
+    summary:
+      `Investigated transaction ${hash.slice(0, 10)}… on chain ${chainId}. ` +
+      `Status: ${status}. Sent by ${inv.transaction.from} to ${recipientLabel}. ` +
+      `${inv.findings.length} findings produced.`,
+    data: {
+      investigationId: inv.id,
+      hash: inv.hash,
+      chainId: inv.chainId,
+      recipientType: inv.recipientType,
+      status,
+      transaction: inv.transaction,
+      receipt: inv.receipt,
+      findings: findingSummaries,
+      evidenceCount: inv.evidence.length,
+    },
+  };
+}
+
+// ─── Registry ──────────────────────────────────────────────────
 
 export interface ToolHandler {
   definition: ToolDefinition;
@@ -118,6 +210,7 @@ export interface ToolHandler {
 
 export const tools: Record<string, ToolHandler> = {
   wallet: { definition: walletTool, handler: handleWallet },
+  transaction: { definition: transactionTool, handler: handleTransaction },
 };
 
 export const toolDefinitions: ToolDefinition[] = Object.values(tools).map(

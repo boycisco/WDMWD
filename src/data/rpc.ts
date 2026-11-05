@@ -14,7 +14,18 @@
  * directly.
  */
 
-import { createPublicClient, http, type PublicClient, type Transport } from "viem";
+import {
+  createPublicClient,
+  http,
+  TransactionNotFoundError,
+  TransactionReceiptNotFoundError,
+  type Address,
+  type Hash,
+  type PublicClient,
+  type Transaction,
+  type TransactionReceipt,
+  type Transport,
+} from "viem";
 import { getChain } from "@/chain/registry";
 import { config } from "@/config/config";
 
@@ -23,6 +34,19 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 export interface RpcClient {
   getBlockNumber(): Promise<bigint>;
   getChainId(): Promise<number>;
+  /**
+   * Returns the transaction or `null` if the chain has no record of it.
+   * Throws `RpcError` for RPC-layer failures (timeouts, malformed
+   * responses) — those are distinct from "not found".
+   */
+  getTransaction(hash: Hash): Promise<Transaction | null>;
+  /** Same contract as `getTransaction`. */
+  getTransactionReceipt(hash: Hash): Promise<TransactionReceipt | null>;
+  /**
+   * Returns the deployed bytecode at `address`, or `undefined` for an
+   * EOA. Used to classify transaction recipients as contract vs wallet.
+   */
+  getBytecode(address: Address): Promise<string | undefined>;
 }
 
 export interface RpcOptions {
@@ -58,5 +82,22 @@ export function createRpcClient(chainId: number, opts: RpcOptions = {}): RpcClie
   return {
     getBlockNumber: () => client.getBlockNumber(),
     getChainId: () => client.getChainId(),
+    getTransaction: async (hash) => {
+      try {
+        return await client.getTransaction({ hash });
+      } catch (err) {
+        if (err instanceof TransactionNotFoundError) return null;
+        throw err;
+      }
+    },
+    getTransactionReceipt: async (hash) => {
+      try {
+        return await client.getTransactionReceipt({ hash });
+      } catch (err) {
+        if (err instanceof TransactionReceiptNotFoundError) return null;
+        throw err;
+      }
+    },
+    getBytecode: (address) => client.getBytecode({ address }),
   };
 }
