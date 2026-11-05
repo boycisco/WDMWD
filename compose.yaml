@@ -1,0 +1,38 @@
+services:
+  wdmwd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wdmwd:local
+    container_name: wdmwd
+    restart: unless-stopped
+    ports:
+      # Bind to loopback only. For LAN/remote access, read SECURITY.md
+      # first — you must add auth at the reverse-proxy layer.
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      # These override .env defaults to match the container's bind address
+      HOST: "0.0.0.0"
+      REMOTE_ACCESS: "true"
+      DATABASE_URL: "file:/app/data/wdmwd.db"
+    volumes:
+      # Named volume so the SQLite database survives `docker compose down`
+      - wdmwd-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    stop_grace_period: 15s
+
+volumes:
+  wdmwd-data:

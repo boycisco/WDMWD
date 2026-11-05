@@ -26,6 +26,9 @@ import {
 import { getDb } from "@/store/store";
 import type { Message } from "@/model/model";
 
+/** Max request body size. Prevents trivial DoS via huge payloads. */
+const MAX_BODY_BYTES = 64 * 1024;
+
 const PostBodySchema = z.object({
   message: z.string().min(1).max(10_000),
   sessionId: z.string().min(1).optional(),
@@ -65,6 +68,15 @@ function toAgentHistory(stored: StoredMessage[]): Message[] {
 // ─── POST ──────────────────────────────────────────────────────
 
 export async function POST(request: Request): Promise<Response> {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
+    return errorJson(
+      413,
+      "PAYLOAD_TOO_LARGE",
+      `Request body exceeds ${MAX_BODY_BYTES} bytes`,
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

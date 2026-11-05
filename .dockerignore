@@ -1,0 +1,34 @@
+# Dependencies (rebuilt in image)
+node_modules
+
+# Next.js build output (rebuilt in image)
+.next
+
+# Local database
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets — MUST NOT be in the image
+.env
+.env.local
+
+# Git
+.git
+.gitignore
+
+# Documentation (not needed at runtime)
+docs/
+*.md
+!README.md
+
+# Dev tooling
+.vscode
+.idea
+coverage/
+*.log
+smoke-*.mjs
+
+# Local git metadata
+.gitattributes
