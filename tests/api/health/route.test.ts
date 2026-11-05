@@ -7,6 +7,12 @@ vi.mock("@/store/store", () => ({
   }),
 }));
 
+vi.mock("@/data/rpc", () => ({
+  createRpcClient: () => {
+    throw new Error("rpc not available in unit tests");
+  },
+}));
+
 describe("GET /api/health", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -21,7 +27,11 @@ describe("GET /api/health", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.status).toBe("ok");
+    // Session 4: overall status is "ok" only when database AND blockchain
+    // are both ok. Test env has no BASE_RPC_URL / ALCHEMY_API_KEY, so
+    // probeChain returns "not_configured" → overall is "degraded".
+    // The "ok" path is verified by the live curl command during dev.
+    expect(body.status).toBe("degraded");
     expect(body.checks.application.status).toBe("ok");
     expect(body.checks.database.status).toBe("ok");
     expect(body.checks.blockchain.status).toBe("not_configured");

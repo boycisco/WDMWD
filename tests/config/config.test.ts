@@ -70,6 +70,28 @@ describe("config.loadConfig", () => {
     });
     expect(cfg.env).toBe("production");
   });
+
+  it("treats empty env vars as unset (placeholder-friendly)", () => {
+    const cfg = loadConfig({
+      NODE_ENV: "development",
+      OPENAI_API_KEY: "",
+      ALCHEMY_API_KEY: "",
+      BASE_RPC_URL: "",
+    });
+    expect(cfg.ai.openaiApiKey).toBeUndefined();
+    expect(cfg.chain.alchemyApiKey).toBeUndefined();
+    expect(cfg.chain.baseRpcUrl).toBeUndefined();
+  });
+
+  it("still requires OPENAI_API_KEY in production even when set to empty", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        OPENAI_API_KEY: "",
+        BASE_RPC_URL: "https://example.com",
+      }),
+    ).toThrow(ConfigError);
+  });
 });
 
 describe("config.safeConfig", () => {

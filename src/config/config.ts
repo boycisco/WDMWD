@@ -128,7 +128,16 @@ export interface AppConfig {
 export function loadConfig(
   env: Record<string, string | undefined> = process.env,
 ): AppConfig {
-  const parsed = EnvSchema.safeParse(env);
+  // `.env` files commonly carry empty placeholders like `OPENAI_API_KEY=`
+  // for values that are intentionally unset. Zod's `.optional()` only
+  // allows `undefined`, not `""`, so we normalize here: an env var that
+  // is present but empty is semantically identical to "not set."
+  const cleaned: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(env)) {
+    cleaned[key] = value === "" ? undefined : value;
+  }
+
+  const parsed = EnvSchema.safeParse(cleaned);
   if (!parsed.success) {
     const summary = parsed.error.issues
       .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
