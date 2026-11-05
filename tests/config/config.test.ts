@@ -10,8 +10,8 @@ describe("config.loadConfig", () => {
     expect(cfg.server.host).toBe("127.0.0.1");
     expect(cfg.server.remote).toBe(false);
     expect(cfg.database.url).toBe("file:./data/wdmwd.db");
-    expect(cfg.ai.provider).toBe("openai");
-    expect(cfg.ai.openaiModel).toBe("gpt-4o-mini");
+    expect(cfg.ai.provider).toBe("gemini");
+    expect(cfg.ai.geminiModel).toBe("gemini-3.6-flash");
     expect(cfg.limits.maxToolCalls).toBe(8);
     expect(cfg.limits.maxAgentIterations).toBe(6);
     expect(cfg.limits.maxTraceDepth).toBe(5);
@@ -44,10 +44,21 @@ describe("config.loadConfig", () => {
     expect(cfg.server.remote).toBe(true);
   });
 
-  it("requires OPENAI_API_KEY in production", () => {
+  it("requires GEMINI_API_KEY in production when provider is gemini", () => {
     expect(() =>
       loadConfig({
         NODE_ENV: "production",
+        AI_PROVIDER: "gemini",
+        BASE_RPC_URL: "https://example.com",
+      }),
+    ).toThrow(ConfigError);
+  });
+
+  it("requires OPENAI_API_KEY in production when provider is openai", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        AI_PROVIDER: "openai",
         BASE_RPC_URL: "https://example.com",
       }),
     ).toThrow(ConfigError);
@@ -62,13 +73,26 @@ describe("config.loadConfig", () => {
     ).toThrow(ConfigError);
   });
 
-  it("accepts a fully populated production environment", () => {
+  it("accepts a fully populated production environment (gemini)", () => {
     const cfg = loadConfig({
       NODE_ENV: "production",
+      AI_PROVIDER: "gemini",
+      GEMINI_API_KEY: "AIza-test",
+      BASE_RPC_URL: "https://example.com",
+    });
+    expect(cfg.env).toBe("production");
+    expect(cfg.ai.provider).toBe("gemini");
+  });
+
+  it("accepts a fully populated production environment (openai)", () => {
+    const cfg = loadConfig({
+      NODE_ENV: "production",
+      AI_PROVIDER: "openai",
       OPENAI_API_KEY: "sk-test",
       BASE_RPC_URL: "https://example.com",
     });
     expect(cfg.env).toBe("production");
+    expect(cfg.ai.provider).toBe("openai");
   });
 
   it("treats empty env vars as unset (placeholder-friendly)", () => {
@@ -87,6 +111,7 @@ describe("config.loadConfig", () => {
     expect(() =>
       loadConfig({
         NODE_ENV: "production",
+        AI_PROVIDER: "openai",
         OPENAI_API_KEY: "",
         BASE_RPC_URL: "https://example.com",
       }),

@@ -15,9 +15,11 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.5",
+    "openai": "^7.51.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "viem": "^2.57.16",

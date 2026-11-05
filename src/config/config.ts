@@ -50,9 +50,12 @@ const EnvSchema = z
     BASE_RPC_URL: z.string().url().optional(),
     ALCHEMY_API_KEY: z.string().min(1).optional(),
 
-    AI_PROVIDER: z.enum(["openai"]).default("openai"),
+    AI_PROVIDER: z.enum(["openai", "gemini"]).default("gemini"),
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
+
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_MODEL: z.string().min(1).default("gemini-3.6-flash"),
 
     MAX_TOOL_CALLS: IntFromEnv({ min: 1, max: 100 }).default(8),
     MAX_AGENT_ITERATIONS: IntFromEnv({ min: 1, max: 100 }).default(6),
@@ -74,11 +77,18 @@ const EnvSchema = z
 
     // Production requires real provider credentials.
     if (env.NODE_ENV === "production") {
-      if (!env.OPENAI_API_KEY) {
+      if (env.AI_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
         ctx.addIssue({
           code: "custom",
-          message: "OPENAI_API_KEY is required in production",
+          message: "OPENAI_API_KEY is required when AI_PROVIDER=openai",
           path: ["OPENAI_API_KEY"],
+        });
+      }
+      if (env.AI_PROVIDER === "gemini" && !env.GEMINI_API_KEY) {
+        ctx.addIssue({
+          code: "custom",
+          message: "GEMINI_API_KEY is required when AI_PROVIDER=gemini",
+          path: ["GEMINI_API_KEY"],
         });
       }
       if (!env.BASE_RPC_URL && !env.ALCHEMY_API_KEY) {
@@ -114,6 +124,8 @@ export interface AppConfig {
     provider: Env["AI_PROVIDER"];
     openaiApiKey?: string;
     openaiModel: string;
+    geminiApiKey?: string;
+    geminiModel: string;
   };
   limits: {
     maxToolCalls: number;
@@ -157,6 +169,8 @@ export function loadConfig(
       provider: e.AI_PROVIDER,
       openaiApiKey: e.OPENAI_API_KEY,
       openaiModel: e.OPENAI_MODEL,
+      geminiApiKey: e.GEMINI_API_KEY,
+      geminiModel: e.GEMINI_MODEL,
     },
     limits: {
       maxToolCalls: e.MAX_TOOL_CALLS,
@@ -181,6 +195,8 @@ export interface SafeAppConfig {
     provider: Env["AI_PROVIDER"];
     openaiApiKeyConfigured: boolean;
     openaiModel: string;
+    geminiApiKeyConfigured: boolean;
+    geminiModel: string;
   };
   limits: AppConfig["limits"];
 }
@@ -202,6 +218,8 @@ export function safeConfig(cfg: AppConfig = config): SafeAppConfig {
       provider: cfg.ai.provider,
       openaiApiKeyConfigured: Boolean(cfg.ai.openaiApiKey),
       openaiModel: cfg.ai.openaiModel,
+      geminiApiKeyConfigured: Boolean(cfg.ai.geminiApiKey),
+      geminiModel: cfg.ai.geminiModel,
     },
     limits: { ...cfg.limits },
   };
