@@ -52,9 +52,9 @@ beforeEach(async () => {
       ],
       evidence: [
         {
-          id: "ev_1",
+          id: "ev_tx_1",
           chainId: 8453,
-          type: "transfer",
+          type: "receipt",
           classification: "confirmed",
           data: {},
           source: "test",

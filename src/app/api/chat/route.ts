@@ -1,18 +1,20 @@
 /**
- * /api/chat — the primary conversation endpoint (spec §11).
+ * /api/chat — the primary conversation endpoint.
  *
  * POST   — submit a message, stream agent response as SSE
  * GET    — retrieve session history (or list sessions)
  * DELETE — delete a session and dependent records
  *
- * Streaming: uses ReadableStream + SSE. Each event is one
- * `event: <type>\ndata: <json>\n\n` block. See src/chat/stream.ts.
+ * SSE events match the frontend contract (src/chat/stream.ts):
+ * message.start, investigation.start, tool.start, tool.result,
+ * evidence, message.delta, message.complete, error, done.
  */
 
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { startAgent } from "@/agent/agent";
-import { expandEvent, formatSse } from "@/chat/stream";
+import { expandEvent, formatSse, type SseContext } from "@/chat/stream";
 import { extractRefs, formatRefsForPrompt } from "@/chat/context";
 import {
   addMessage,
@@ -135,6 +137,8 @@ export async function POST(request: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const sessionId = session.id;
   const userMessage = parsed.data.message;
+  const assistantMessageId = randomUUID();
+  const sseContext: SseContext = { sessionId, assistantMessageId };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -156,13 +160,13 @@ export async function POST(request: Request): Promise<Response> {
         });
 
         for await (const event of iter) {
-          for (const sse of expandEvent(event)) {
+          for (const sse of expandEvent(event, sseContext)) {
             send(formatSse(sse));
             if (
               sse.type === "message.delta" &&
-              typeof sse.data.delta === "string"
+              typeof sse.data.content === "string"
             ) {
-              assistantText += sse.data.delta;
+              assistantText += sse.data.content;
             }
           }
           if (event.type === "message.complete") {
@@ -172,20 +176,32 @@ export async function POST(request: Request): Promise<Response> {
 
         if (assistantText.length > 0) {
           try {
-            addMessage(getDb(), sessionId, "assistant", assistantText);
+            addMessage(
+              getDb(),
+              sessionId,
+              "assistant",
+              assistantText,
+              undefined,
+              assistantMessageId,
+            );
           } catch {
             /* persistence best-effort; don't kill the stream */
           }
         }
 
-        send(formatSse({ type: "done", data: { sessionId } }));
+        send(
+          formatSse({
+            type: "done",
+            data: { sessionId, completedAt: new Date().toISOString() },
+          }),
+        );
       } catch (err) {
         send(
           formatSse({
             type: "error",
             data: {
+              code: "INTERNAL",
               message: err instanceof Error ? err.message : "Unknown error",
-              recoverable: false,
             },
           }),
         );

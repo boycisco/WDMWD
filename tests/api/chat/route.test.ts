@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentEvent } from "@/agent/loop";
 import type { Db } from "@/store/store";
 
-// Mock the agent facade so no real model is invoked.
 const mockEvents: AgentEvent[] = [];
 
 vi.mock("@/agent/agent", () => ({
@@ -13,9 +12,6 @@ vi.mock("@/agent/agent", () => ({
   }),
 }));
 
-// Mock the chat persistence layer.
-// All functions take `db` as the first argument (matching the real
-// `chat.ts` signatures), so route.ts calls (`fn(db, ...)`) line up.
 vi.mock("@/chat/chat", () => ({
   createSession: vi.fn(() => ({
     id: "sess-1",
@@ -32,9 +28,6 @@ vi.mock("@/chat/chat", () => ({
   getMessages: vi.fn(() => []),
 }));
 
-// Mock the store so importing route doesn't need a DB.
-// The returned object is opaque here — chat.ts is mocked, so route.ts
-// never calls methods on it.
 vi.mock("@/store/store", () => ({
   getDb: () => ({} as unknown as Db),
 }));
@@ -103,9 +96,10 @@ describe("POST /api/chat", () => {
     const body = await collectSse(res.body!);
     expect(body).toContain("event: message.start");
     expect(body).toContain("event: investigation.start");
-    expect(body).toContain('event: message.delta\ndata: {"delta":"Hello"}');
+    expect(body).toContain('event: message.delta\ndata: {"content":"Hello"}');
     expect(body).toContain("event: message.complete");
     expect(body).toContain("event: done");
+    expect(body).toContain("completedAt");
   });
 
   it("streams tool events and evidence", async () => {
@@ -123,7 +117,27 @@ describe("POST /api/chat", () => {
         result: {
           ok: true,
           summary: "ok",
-          data: { evidenceIds: ["ev_1", "ev_2"] },
+          data: {},
+          evidence: [
+            {
+              id: "ev_1",
+              chainId: 8453,
+              type: "transfer",
+              classification: "confirmed",
+              data: {},
+              source: "test",
+              retrievedAt: "2024-01-01T00:00:00.000Z",
+            },
+            {
+              id: "ev_2",
+              chainId: 8453,
+              type: "transfer",
+              classification: "confirmed",
+              data: {},
+              source: "test",
+              retrievedAt: "2024-01-01T00:00:00.000Z",
+            },
+          ],
         },
       },
       { type: "message.complete", content: "The wallet..." },
@@ -140,6 +154,7 @@ describe("POST /api/chat", () => {
     expect(body).toContain("event: tool.result");
     expect(body).toContain("event: evidence");
     expect(body).toContain("ev_1");
+    expect(body).toContain("ev_2");
   });
 });
 

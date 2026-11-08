@@ -26,7 +26,13 @@ export type AgentEvent =
   | { type: "tool.result"; name: string; result: ToolResult }
   | { type: "message.delta"; delta: string }
   | { type: "message.complete"; content: string }
-  | { type: "error"; message: string; recoverable: boolean };
+  | {
+      type: "error";
+      /** Structured error code, e.g. "LIMIT_EXCEEDED", "AI_ERROR", "INTERNAL" */
+      code: string;
+      message: string;
+      recoverable: boolean;
+    };
 
 export interface RunAgentInput {
   model: Model;
@@ -63,6 +69,7 @@ export async function* runAgent(
     if (Date.now() - start > input.limits.requestTimeoutMs) {
       yield {
         type: "error",
+        code: "LIMIT_EXCEEDED",
         message: `Request exceeded ${input.limits.requestTimeoutMs}ms; stopping.`,
         recoverable: false,
       };
@@ -96,13 +103,14 @@ export async function* runAgent(
     } catch (err) {
       const message =
         err instanceof Error ? err.message.split("\n")[0]! : "Model error";
-      yield { type: "error", message, recoverable: false };
+      yield { type: "error", code: "AI_ERROR", message, recoverable: false };
       return;
     }
 
     if (!finalOutput) {
       yield {
         type: "error",
+        code: "INTERNAL",
         message: "Model produced no output",
         recoverable: false,
       };
@@ -127,6 +135,7 @@ export async function* runAgent(
     if (totalToolCalls + toolCalls.length > input.limits.maxToolCalls) {
       yield {
         type: "error",
+        code: "LIMIT_EXCEEDED",
         message: `Exceeded max tool calls (${input.limits.maxToolCalls})`,
         recoverable: false,
       };
@@ -144,17 +153,27 @@ export async function* runAgent(
       yield { type: "tool.start", name: call.name, args: call.arguments };
       const result = await executeTool(call.name, call.arguments);
       yield { type: "tool.result", name: call.name, result };
+      // Strip evidence from what the model sees — the model only needs
+      // the summary and structured data, not the full evidence array
+      // (which can be 200+ items after a wallet investigation). Evidence
+      // flows separately via the SSE stream to the frontend.
       messages.push({
         role: "tool",
         toolCallId: call.id,
-        toolCallName: call.name, // Gemini needs it; OpenAI ignores
-        content: JSON.stringify(result),
+        toolCallName: call.name,
+        content: JSON.stringify({
+          ok: result.ok,
+          summary: result.summary,
+          data: result.data,
+          error: result.error,
+        }),
       });
     }
   }
 
   yield {
     type: "error",
+    code: "LIMIT_EXCEEDED",
     message: `Reached max iterations (${input.limits.maxAgentIterations}). Stopping.`,
     recoverable: false,
   };

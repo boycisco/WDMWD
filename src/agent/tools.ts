@@ -13,6 +13,7 @@
 import { z } from "zod";
 import { ValidationError } from "@/core/errors";
 import type { ToolDefinition } from "@/model/model";
+import type { Evidence } from "@/evidence/evidence";
 import { investigateWallet } from "@/wallet/investigate";
 import { investigateTransaction } from "@/transaction/investigate";
 import { isValidAddress } from "@/wallet/wallet";
@@ -27,6 +28,13 @@ export interface ToolResult {
   ok: boolean;
   summary: string;
   data?: unknown;
+  /**
+   * Full evidence items supporting this result. NOT sent to the model
+   * (stripped in loop.ts); only streamed to the frontend as per-item
+   * SSE `evidence` events. Optional — tools that produce no evidence
+   * (e.g. a not-found response) can omit it.
+   */
+  evidence?: Evidence[];
   error?: { code: string; message: string };
 }
 
@@ -106,13 +114,9 @@ async function handleWallet(args: unknown): Promise<ToolResult> {
       topOutgoingCounterparties: investigation.profile.topOutgoingCounterparties,
       topContracts: investigation.profile.topContracts,
       findings: findingSummaries,
-      // NOTE: the flat evidenceIds array is deliberately omitted.
-      // Per-finding evidence IDs (in `findings[].evidenceIds`) are what
-      // the model cites; the full list is transmitted separately via the
-      // `evidence` SSE event for the frontend. Sending 200 raw IDs back
-      // to the model bloats every request by ~6KB with no benefit.
       evidenceCount: investigation.evidence.length,
     },
+    evidence: investigation.evidence,
   };
 }
 
@@ -198,6 +202,7 @@ async function handleTransaction(args: unknown): Promise<ToolResult> {
       findings: findingSummaries,
       evidenceCount: inv.evidence.length,
     },
+    evidence: inv.evidence,
   };
 }
 

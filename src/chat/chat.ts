@@ -72,8 +72,9 @@ export function addMessage(
   role: StoredMessage["role"],
   content: string,
   metadata?: Record<string, unknown>,
+  explicitId?: string,
 ): StoredMessage {
-  const id = randomUUID();
+  const id = explicitId ?? randomUUID();
   const now = Date.now();
   db.insert(messagesTable)
     .values({
@@ -84,7 +85,6 @@ export function addMessage(
       metadata: metadata ?? null,
     })
     .run();
-  // Bump session's updatedAt so listSessions orders correctly.
   db.update(sessionsTable)
     .set({ updatedAt: now })
     .where(eq(sessionsTable.id, sessionId))
