@@ -16,13 +16,28 @@ vi.mock("@/chat/chat", () => ({
   createSession: vi.fn(() => ({
     id: "sess-1",
     title: "t",
-    createdAt: 0,
-    updatedAt: 0,
+    createdAt: 1000,
+    updatedAt: 1000,
   })),
   getSession: vi.fn((_db: unknown, id: string) =>
-    id === "sess-1" ? { id, title: "t", createdAt: 0, updatedAt: 0 } : null,
+    id === "sess-1"
+      ? { id, title: "t", createdAt: 1000, updatedAt: 1000 }
+      : null,
+  ),
+  getSessionWithStats: vi.fn((_db: unknown, id: string) =>
+    id === "sess-1"
+      ? {
+          id,
+          title: "t",
+          createdAt: 1000,
+          updatedAt: 1000,
+          messageCount: 2,
+          lastMessageSnippet: "hi",
+        }
+      : null,
   ),
   listSessions: vi.fn(() => []),
+  listSessionsWithStats: vi.fn(() => []),
   deleteSession: vi.fn((_db: unknown, id: string) => id === "sess-1"),
   addMessage: vi.fn(),
   getMessages: vi.fn(() => []),

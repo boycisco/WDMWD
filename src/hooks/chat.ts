@@ -41,7 +41,19 @@ export function useChat({ sessionId, onSessionCreated, onSessionUpdated }: UseCh
       try {
         const data = await api.getSession(sessionId);
         if (isMounted) {
-          setMessages(data.messages || []);
+          setMessages((prev) => {
+            // Do NOT overwrite in-flight messages. When a new session is
+            // created mid-stream, this effect re-runs because `sessionId`
+            // changes. At that moment the server has only the user message
+            // persisted (assistant is still streaming), so overwriting
+            // would wipe out the in-flight assistant bubble and cause all
+            // subsequent SSE events (deltas, evidence, complete) to be
+            // dropped — the bubble would never appear.
+            if (prev.some((m) => m.isStreaming)) {
+              return prev;
+            }
+            return data.messages || [];
+          });
         }
       } catch (err: unknown) {
         if (isMounted) {

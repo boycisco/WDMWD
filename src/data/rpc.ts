@@ -34,19 +34,11 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 export interface RpcClient {
   getBlockNumber(): Promise<bigint>;
   getChainId(): Promise<number>;
-  /**
-   * Returns the transaction or `null` if the chain has no record of it.
-   * Throws `RpcError` for RPC-layer failures (timeouts, malformed
-   * responses) — those are distinct from "not found".
-   */
   getTransaction(hash: Hash): Promise<Transaction | null>;
-  /** Same contract as `getTransaction`. */
   getTransactionReceipt(hash: Hash): Promise<TransactionReceipt | null>;
-  /**
-   * Returns the deployed bytecode at `address`, or `undefined` for an
-   * EOA. Used to classify transaction recipients as contract vs wallet.
-   */
   getBytecode(address: Address): Promise<string | undefined>;
+  /** Returns the native ETH balance in wei. */
+  getBalance(address: Address): Promise<bigint>;
 }
 
 export interface RpcOptions {
@@ -99,5 +91,6 @@ export function createRpcClient(chainId: number, opts: RpcOptions = {}): RpcClie
       }
     },
     getBytecode: (address) => client.getBytecode({ address }),
+    getBalance: (address) => client.getBalance({ address }),
   };
 }

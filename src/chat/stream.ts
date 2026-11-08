@@ -18,7 +18,7 @@
  */
 
 import type { AgentEvent } from "@/agent/loop";
-import type { Evidence } from "@/evidence/evidence";
+import { toFrontendEvidenceItem } from "@/evidence/item";
 
 export type SseEventType =
   | "message.start"
@@ -43,76 +43,6 @@ export interface SseEvent {
 export interface SseContext {
   sessionId: string;
   assistantMessageId: string;
-}
-
-/**
- * Frontend-facing evidence item shape. Mirrors `EvidenceItem` from
- * the browser app's `src/types/api.ts`.
- */
-interface FrontendEvidenceItem {
-  id: string;
-  classification: "confirmed" | "inferred" | "unknown";
-  title?: string;
-  txHash?: string;
-  address?: string;
-  blockNumber?: number;
-  timestamp?: string;
-  assetMovement?: string;
-  source?: string;
-  explorerLink?: string;
-  limitations?: string;
-  details?: string;
-}
-
-/**
- * Transform an internal `Evidence` into the shape the frontend renders.
- * Fields not derivable from the evidence are omitted (not faked).
- */
-function toEvidenceItem(ev: Evidence): FrontendEvidenceItem {
-  const data = (ev.data ?? {}) as {
-    category?: string;
-    amountFormatted?: string;
-    symbol?: string;
-    direction?: string;
-  };
-
-  // Build a human-readable title from the type and any available metadata.
-  let title: string | undefined;
-  if (ev.type === "transfer") {
-    const symbol = data.symbol ?? (data.category === "external" ? "ETH" : "Tokens");
-    title = `${symbol} Transfer`;
-  } else if (ev.type === "receipt") {
-    title = "Transaction";
-  } else {
-    title = ev.type.charAt(0).toUpperCase() + ev.type.slice(1);
-  }
-
-  // Asset movement: +1.5 ETH, -0.5 USDC, or omitted if unknown.
-  let assetMovement: string | undefined;
-  if (data.amountFormatted && data.symbol) {
-    const prefix =
-      data.direction === "in" ? "+" : data.direction === "out" ? "-" : "";
-    assetMovement = `${prefix}${data.amountFormatted} ${data.symbol}`;
-  }
-
-  // Explorer link for any transaction-backed evidence.
-  let explorerLink: string | undefined;
-  if (ev.transactionHash) {
-    explorerLink = `https://basescan.org/tx/${ev.transactionHash}`;
-  }
-
-  return {
-    id: ev.id,
-    classification: ev.classification,
-    title,
-    txHash: ev.transactionHash,
-    address: ev.addresses?.[0],
-    blockNumber: ev.blockNumber,
-    timestamp: ev.blockTimestamp,
-    assetMovement,
-    source: ev.source,
-    explorerLink,
-  };
 }
 
 /**
@@ -180,7 +110,7 @@ export function expandEvent(
         for (const ev of event.result.evidence) {
           output.push({
             type: "evidence",
-            data: { evidence: toEvidenceItem(ev) },
+            data: { evidence: toFrontendEvidenceItem(ev) },
           });
         }
       }

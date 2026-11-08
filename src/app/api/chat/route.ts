@@ -22,7 +22,9 @@ import {
   deleteSession,
   getMessages,
   getSession,
-  listSessions,
+  getSessionWithStats,
+  listSessionsWithStats,
+  type SessionWithStats,
   type StoredMessage,
 } from "@/chat/chat";
 import { getDb } from "@/store/store";
@@ -221,6 +223,47 @@ export async function POST(request: Request): Promise<Response> {
   });
 }
 
+
+// ─── Response transformers ─────────────────────────────────────
+
+interface FrontendSession {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  lastMessageSnippet?: string;
+}
+
+interface FrontendMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
+function toFrontendSession(s: SessionWithStats): FrontendSession {
+  return {
+    id: s.id,
+    title: s.title,
+    createdAt: new Date(s.createdAt).toISOString(),
+    updatedAt: new Date(s.updatedAt).toISOString(),
+    messageCount: s.messageCount,
+    ...(s.lastMessageSnippet && { lastMessageSnippet: s.lastMessageSnippet }),
+  };
+}
+
+function toFrontendMessage(m: StoredMessage): FrontendMessage | null {
+  if (m.role !== "user" && m.role !== "assistant") return null;
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    createdAt: new Date(m.createdAt).toISOString(),
+  };
+}
+
+
 // ─── GET ───────────────────────────────────────────────────────
 
 export async function GET(request: Request): Promise<Response> {
@@ -231,15 +274,20 @@ export async function GET(request: Request): Promise<Response> {
 
   const db = getDb();
   if (!sessionId) {
-    const sessions = listSessions(db, limit);
+    const sessions = listSessionsWithStats(db, limit).map(toFrontendSession);
     return NextResponse.json({ sessions });
   }
-  const session = getSession(db, sessionId);
+  const session = getSessionWithStats(db, sessionId);
   if (!session) {
     return errorJson(404, "NOT_FOUND", `Session ${sessionId} not found`);
   }
-  const messages = getMessages(db, sessionId, limit);
-  return NextResponse.json({ session, messages });
+  const messages = getMessages(db, sessionId, limit)
+    .map(toFrontendMessage)
+    .filter((m): m is FrontendMessage => m !== null);
+  return NextResponse.json({
+    session: toFrontendSession(session),
+    messages,
+  });
 }
 
 // ─── DELETE ────────────────────────────────────────────────────

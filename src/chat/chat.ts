@@ -9,7 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import {
   messages as messagesTable,
   sessions as sessionsTable,
@@ -113,4 +113,51 @@ export function getMessages(
     ...r,
     metadata: r.metadata ?? undefined,
   }));
+}
+
+
+// ─── Session statistics ────────────────────────────────────────
+
+export interface SessionWithStats extends Session {
+  messageCount: number;
+  lastMessageSnippet?: string;
+}
+
+function attachStats(db: Db, session: Session): SessionWithStats {
+  const countRows = db
+    .select({ c: sql<number>`count(*)` })
+    .from(messagesTable)
+    .where(eq(messagesTable.sessionId, session.id))
+    .all();
+  const messageCount = Number(countRows[0]?.c ?? 0);
+
+  const lastRows = db
+    .select()
+    .from(messagesTable)
+    .where(eq(messagesTable.sessionId, session.id))
+    .orderBy(desc(messagesTable.createdAt))
+    .limit(1)
+    .all();
+  const lastContent = lastRows[0]?.content;
+
+  return {
+    ...session,
+    messageCount,
+    lastMessageSnippet: lastContent ? lastContent.slice(0, 120) : undefined,
+  };
+}
+
+export function listSessionsWithStats(
+  db: Db,
+  limit = 50,
+): SessionWithStats[] {
+  return listSessions(db, limit).map((s) => attachStats(db, s));
+}
+
+export function getSessionWithStats(
+  db: Db,
+  id: string,
+): SessionWithStats | null {
+  const session = getSession(db, id);
+  return session ? attachStats(db, session) : null;
 }

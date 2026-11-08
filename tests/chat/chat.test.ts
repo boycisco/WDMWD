@@ -107,3 +107,43 @@ describe("chat — messages", () => {
     expect(getMessages(db, a.id)[0]!.content).toBe("for A");
   });
 });
+
+describe("chat — session stats", () => {
+  it("listSessionsWithStats returns messageCount and lastMessageSnippet", async () => {
+    const { listSessionsWithStats } = await import("@/chat/chat");
+    const s = createSession(db, "Test");
+    addMessage(db, s.id, "user", "first message");
+    addMessage(db, s.id, "assistant", "last message content here");
+
+    const sessions = listSessionsWithStats(db);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]!.messageCount).toBe(2);
+    expect(sessions[0]!.lastMessageSnippet).toBe("last message content here");
+  });
+
+  it("getSessionWithStats returns stats for a single session", async () => {
+    const { getSessionWithStats } = await import("@/chat/chat");
+    const s = createSession(db, "Test");
+    addMessage(db, s.id, "user", "hello");
+
+    const stats = getSessionWithStats(db, s.id);
+    expect(stats).not.toBeNull();
+    expect(stats!.messageCount).toBe(1);
+    expect(stats!.lastMessageSnippet).toBe("hello");
+  });
+
+  it("getSessionWithStats returns null for unknown session", async () => {
+    const { getSessionWithStats } = await import("@/chat/chat");
+    expect(getSessionWithStats(db, "nonexistent")).toBeNull();
+  });
+
+  it("truncates lastMessageSnippet to 120 chars", async () => {
+    const { listSessionsWithStats } = await import("@/chat/chat");
+    const s = createSession(db, "Test");
+    const longMsg = "x".repeat(200);
+    addMessage(db, s.id, "user", longMsg);
+
+    const sessions = listSessionsWithStats(db);
+    expect(sessions[0]!.lastMessageSnippet!.length).toBe(120);
+  });
+});

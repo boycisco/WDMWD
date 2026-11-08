@@ -9,16 +9,28 @@ vi.mock("@/wallet/investigate", () => ({
     profile: {
       chainId: 8453,
       address: "0x4200000000000000000000000000000000000010",
-      incoming: [],
+      incoming: [
+        {
+          chainId: 8453,
+          hash: "0x" + "a".repeat(64),
+          blockNumber: 100,
+          blockTimestamp: "2024-01-01T00:00:00.000Z",
+          from: "0x" + "1".repeat(40),
+          to: "0x4200000000000000000000000000000000000010",
+          category: "external",
+          amount: { raw: "1000000000000000000", formatted: "1.0", decimals: 18, symbol: "ETH" },
+          direction: "in",
+        },
+      ],
       outgoing: [],
       summary: {
-        incomingCount: 0,
+        incomingCount: 1,
         outgoingCount: 0,
-        uniqueIncomingCounterparties: 0,
+        uniqueIncomingCounterparties: 1,
         uniqueOutgoingCounterparties: 0,
-        firstBlock: null,
-        lastBlock: null,
-        totalIncomingBySymbol: {},
+        firstBlock: 100,
+        lastBlock: 100,
+        totalIncomingBySymbol: { ETH: "1.0" },
         totalOutgoingBySymbol: {},
       },
       topIncomingCounterparties: [],
@@ -26,9 +38,40 @@ vi.mock("@/wallet/investigate", () => ({
       topContracts: [],
     },
     findings: [
-      { id: "f_coverage", title: "Coverage", explanation: "test", classification: "unknown", evidenceIds: [] },
+      {
+        id: "f_summary",
+        title: "Summary",
+        explanation: "test",
+        classification: "confirmed",
+        evidenceIds: ["ev_1"],
+      },
     ],
-    evidence: [],
+    evidence: [
+      {
+        id: "ev_1",
+        chainId: 8453,
+        type: "transfer",
+        classification: "confirmed",
+        transactionHash: "0x" + "a".repeat(64),
+        blockNumber: 100,
+        blockTimestamp: "2024-01-01T00:00:00.000Z",
+        addresses: ["0x" + "1".repeat(40), "0x4200000000000000000000000000000000000010"],
+        data: {
+          category: "external",
+          amountFormatted: "1.0",
+          symbol: "ETH",
+          direction: "in",
+        },
+        source: "alchemy:8453",
+        retrievedAt: "2024-01-01T00:00:00.000Z",
+      },
+    ],
+  })),
+}));
+
+vi.mock("@/data/rpc", () => ({
+  createRpcClient: vi.fn(() => ({
+    getBalance: vi.fn(async () => 5000000000000000000n), // 5 ETH
   })),
 }));
 
@@ -37,7 +80,7 @@ describe("GET /api/wallet/[address]", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 200 with investigation for a valid address", async () => {
+  it("returns 200 with transformed frontend shape", async () => {
     const { GET } = await import("@/app/api/wallet/[address]/route");
     const req = new Request(
       "http://localhost:3000/api/wallet/0x4200000000000000000000000000000000000010",
@@ -49,8 +92,26 @@ describe("GET /api/wallet/[address]", () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.address).toBe("0x4200000000000000000000000000000000000010");
-    expect(body.findings).toBeDefined();
+
+    // Profile shape
+    expect(body.profile.address).toBe(
+      "0x4200000000000000000000000000000000000010",
+    );
+    expect(body.profile.balance).toBe("5.0");
+    expect(body.profile.txCount).toBe(1);
+    expect(body.profile.firstSeen).toBe("2024-01-01T00:00:00.000Z");
+
+    // Findings shape
+    expect(body.findings).toHaveLength(1);
+    expect(body.findings[0].description).toBe("test");
+    expect(body.findings[0].severity).toBe("info");
+    expect(body.findings[0].classification).toBe("confirmed");
+
+    // Evidence shape
+    expect(body.evidence).toHaveLength(1);
+    expect(body.evidence[0].id).toBe("ev_1");
+    expect(body.evidence[0].assetMovement).toBe("+1.0 ETH");
+    expect(body.evidence[0].explorerLink).toContain("basescan.org/tx/");
   });
 
   it("returns 400 for invalid address", async () => {

@@ -72,7 +72,7 @@ export function ChatApp() {
       {/* 2. Main Conversation Area */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col relative">
         <div className="w-full max-w-[850px] mx-auto flex-1 flex flex-col px-4 sm:px-6 py-4">
-          {loadingHistory ? (
+          {loadingHistory && !isStreaming ? (
             <div className="flex-1 flex items-center justify-center text-xs text-[#627299]">
               Loading conversation history...
             </div>
