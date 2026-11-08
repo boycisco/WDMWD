@@ -67,7 +67,8 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
           <InvestigationActivity steps={message.steps} isStreaming={message.isStreaming} />
         )}
 
-        <div className="prose prose-invert max-w-none text-[15px] text-[#E2E8F0] leading-7 prose-p:leading-7 prose-headings:font-heading prose-headings:font-semibold prose-headings:text-[#F1F5F9] prose-h3:text-lg prose-h4:text-base prose-ul:my-3 prose-li:my-1 prose-strong:text-[#F1F5F9] prose-code:text-[#93C5FD] prose-code:bg-[#17212D] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[13px] prose-pre:bg-[#0B0F14] prose-pre:border prose-pre:border-[#253343] prose-pre:rounded-xl">
+        {/* Markdown Text */}
+        <div className="prose prose-invert max-w-none text-[15px] text-[#E2E8F0] leading-7 prose-p:leading-7 prose-headings:font-heading prose-headings:font-semibold prose-headings:text-[#F1F5F9] prose-h3:text-lg prose-h4:text-base prose-ul:my-4 prose-li:my-1.5 prose-strong:text-[#F1F5F9] prose-code:text-[#93C5FD] prose-code:bg-[#17212D] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[13px] prose-pre:bg-[#0B0F14] prose-pre:border prose-pre:border-[#253343] prose-pre:rounded-xl">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{

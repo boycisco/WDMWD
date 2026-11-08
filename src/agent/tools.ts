@@ -90,12 +90,9 @@ async function handleWallet(args: unknown): Promise<ToolResult> {
   });
 
   const findingSummaries = investigation.findings.map((f) => ({
-    id: f.id,
     title: f.title,
     explanation: f.explanation,
     classification: f.classification,
-    evidenceIds: f.evidenceIds,
-    limitations: f.limitations,
   }));
 
   return {
@@ -167,12 +164,9 @@ async function handleTransaction(args: unknown): Promise<ToolResult> {
   const inv = await investigateTransaction({ chainId, hash });
 
   const findingSummaries = inv.findings.map((f) => ({
-    id: f.id,
     title: f.title,
     explanation: f.explanation,
     classification: f.classification,
-    evidenceIds: f.evidenceIds,
-    limitations: f.limitations,
   }));
 
   const status = inv.receipt?.status ?? "unknown";
