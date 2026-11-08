@@ -66,7 +66,7 @@ export function Header({
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A0F1F] border border-[#1E2945] text-xs font-mono text-[#94A3C8] shadow-inner"
             title={
-              health
+              health?.blockNumber
                 ? `Base Mainnet (8453) · Block #${health.blockNumber.toLocaleString()} · ${health.checks.blockchain.latencyMs || 40}ms`
                 : 'Base Mainnet (8453)'
             }

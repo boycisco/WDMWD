@@ -1,13 +1,14 @@
 /**
- * GET /api/health — application health check (spec §11).
+ * GET /api/health — application health check.
  *
- * Reports whether each subsystem is reachable and configured.
- * NEVER returns secrets — API keys are reported as "configured" or
- * "not_configured" only, via `safeConfig()`.
+ * Returns a shape matching the frontend's `HealthCheckResponse` type:
+ * top-level `chainId`, `chainName`, `blockNumber`, `version`; nested
+ * per-subsystem `checks.*` with `status`, `provider`, `latencyMs`.
  *
- * Blockchain check: performs a real RPC call to Base with a short
- * timeout (2.5s). If Base is slow or down, health says "error" fast
- * rather than hanging.
+ * Backward-compat: also includes `config` (safe-projected) so tests
+ * and future settings endpoints have access to config flags.
+ *
+ * NEVER returns secrets — API keys are reported as `*Configured: boolean`.
  */
 
 import { sql } from "drizzle-orm";
@@ -17,32 +18,46 @@ import { getDb } from "@/store/store";
 import { createRpcClient } from "@/data/rpc";
 
 const CHAIN_PROBE_TIMEOUT_MS = 2_500;
+const APP_VERSION = "0.1.0";
 
-type SubsystemStatus = "ok" | "error" | "not_configured";
+type SubsystemStatus = "ok" | "degraded" | "error" | "not_configured";
 
-interface ChainCheck {
+interface ResponseChecks {
+  application: { status: "ok" };
+  database: { status: SubsystemStatus; error?: string };
+  blockchain: {
+    status: SubsystemStatus;
+    blockNumber?: number;
+    chainId?: number;
+    error?: string;
+    latencyMs?: number;
+  };
+  ai: { status: SubsystemStatus; provider: string };
+  indexer: { status: SubsystemStatus };
+}
+
+interface ResponseBody {
+  status: "ok" | "degraded";
+  checks: ResponseChecks;
+  chainId: number;
+  chainName: string;
+  blockNumber?: number;
+  timestamp: string;
+  version: string;
+  config: ReturnType<typeof safeConfig>;
+}
+
+async function probeChain(): Promise<{
   status: SubsystemStatus;
   blockNumber?: string;
   chainId?: number;
   error?: string;
-}
-
-interface HealthBody {
-  status: "ok" | "degraded";
-  checks: {
-    application: { status: "ok" };
-    database: { status: SubsystemStatus; error?: string };
-    blockchain: ChainCheck;
-    ai: { status: SubsystemStatus };
-  };
-  config: ReturnType<typeof safeConfig>;
-  timestamp: string;
-}
-
-async function probeChain(): Promise<ChainCheck> {
+  latencyMs?: number;
+}> {
   if (!config.chain.baseRpcUrl && !config.chain.alchemyApiKey) {
     return { status: "not_configured" };
   }
+  const start = Date.now();
   try {
     const rpc = createRpcClient(8453, { timeoutMs: CHAIN_PROBE_TIMEOUT_MS });
     const [blockNumber, chainId] = await Promise.all([
@@ -53,17 +68,19 @@ async function probeChain(): Promise<ChainCheck> {
       status: "ok",
       blockNumber: blockNumber.toString(),
       chainId,
+      latencyMs: Date.now() - start,
     };
   } catch (err) {
     return {
       status: "error",
+      latencyMs: Date.now() - start,
       error: err instanceof Error ? err.message.split("\n")[0] : "unknown error",
     };
   }
 }
 
-export async function GET(): Promise<NextResponse<HealthBody>> {
-  const database: HealthBody["checks"]["database"] = { status: "error" };
+export async function GET(): Promise<NextResponse<ResponseBody>> {
+  const database: ResponseChecks["database"] = { status: "error" };
   try {
     const db = getDb();
     db.get(sql`SELECT 1`);
@@ -74,26 +91,45 @@ export async function GET(): Promise<NextResponse<HealthBody>> {
       err instanceof Error ? err.message.split("\n")[0] : "unknown error";
   }
 
-  const blockchain = await probeChain();
+  const chain = await probeChain();
+  const chainId = chain.chainId ?? 8453;
+  const topBlockNumber = chain.blockNumber ? Number(chain.blockNumber) : undefined;
 
-  const ai: HealthBody["checks"]["ai"] = {
-    status: config.ai.openaiApiKey ? "ok" : "not_configured",
+  const ai: ResponseChecks["ai"] = {
+    status:
+      config.ai.openaiApiKey || config.ai.geminiApiKey
+        ? "ok"
+        : "not_configured",
+    provider: config.ai.provider,
   };
 
-  const overall: HealthBody["status"] =
-    database.status === "ok" && blockchain.status === "ok"
-      ? "ok"
-      : "degraded";
+  const indexer: ResponseChecks["indexer"] = {
+    status: config.chain.alchemyApiKey ? "ok" : "not_configured",
+  };
 
-  return NextResponse.json<HealthBody>({
+  const overall: "ok" | "degraded" =
+    database.status === "ok" && chain.status === "ok" ? "ok" : "degraded";
+
+  return NextResponse.json<ResponseBody>({
     status: overall,
     checks: {
       application: { status: "ok" },
       database,
-      blockchain,
+      blockchain: {
+        status: chain.status,
+        ...(chain.blockNumber && { blockNumber: Number(chain.blockNumber) }),
+        ...(chain.chainId && { chainId: chain.chainId }),
+        ...(chain.error && { error: chain.error }),
+        ...(chain.latencyMs !== undefined && { latencyMs: chain.latencyMs }),
+      },
       ai,
+      indexer,
     },
-    config: safeConfig(),
+    chainId,
+    chainName: "Base",
+    ...(topBlockNumber !== undefined && { blockNumber: topBlockNumber }),
     timestamp: new Date().toISOString(),
+    version: APP_VERSION,
+    config: safeConfig(),
   });
 }
