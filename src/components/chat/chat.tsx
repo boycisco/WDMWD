@@ -50,7 +50,6 @@ export function ChatApp() {
     },
   });
 
-  // Auto-scroll to bottom as messages change or stream
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
@@ -59,9 +58,12 @@ export function ChatApp() {
     sendMessage(promptText);
   };
 
+  const isEmpty = messages.length === 0 && !loadingHistory;
+
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent text-[#F0F4FF]">
-      {/* 1. Header */}
+    <div className="flex flex-col h-screen w-screen bg-transparent text-[#F0F4FF] overflow-hidden">
+      
+      {/* 1. Header (Standard flex item, pushes content down) */}
       <Header
         onToggleHistory={() => setHistoryOpen(!historyOpen)}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -69,17 +71,21 @@ export function ChatApp() {
         historyOpen={historyOpen}
       />
 
-      {/* 2. Main Conversation Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col relative">
-        <div className="w-full max-w-[850px] mx-auto flex-1 flex flex-col px-4 sm:px-6 py-4">
+      {/* 2. Main Area (Takes up remaining space) */}
+      <main
+        className={`flex-1 flex flex-col relative ${
+          isEmpty ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'
+        }`}
+      >
+        <div className="w-full max-w-[850px] mx-auto flex-1 flex flex-col px-4 sm:px-6">
           {loadingHistory && !isStreaming ? (
             <div className="flex-1 flex items-center justify-center text-xs text-[#627299]">
               Loading conversation history...
             </div>
-          ) : messages.length === 0 ? (
+          ) : isEmpty ? (
             <EmptyState onSelectPrompt={handleSelectPrompt} />
           ) : (
-            <div className="flex flex-col flex-1 pb-4">
+            <div className="flex flex-col flex-1 py-6 pb-10">
               {messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -94,14 +100,14 @@ export function ChatApp() {
         </div>
       </main>
 
-      {/* 3. Anchored Bottom Composer */}
+      {/* 3. Composer */}
       <Composer
         onSendMessage={sendMessage}
         onStopGeneration={stopGeneration}
         isStreaming={isStreaming}
       />
 
-      {/* 4. History Slide-out Drawer */}
+      {/* Drawers & Modals */}
       <HistoryDrawer
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
@@ -112,20 +118,17 @@ export function ChatApp() {
         onDeleteSession={deleteSession}
       />
 
-      {/* 5. Contextual Evidence Inspector Drawer */}
       <EvidenceDrawer
         evidence={inspectedEvidence}
         onClose={() => setInspectedEvidence(null)}
       />
 
-      {/* 6. Contextual Wallet Inspector Drawer */}
       <WalletInspector
         address={inspectedAddress}
         onClose={() => setInspectedAddress(null)}
         onSelectEvidence={(ev) => setInspectedEvidence(ev)}
       />
 
-      {/* 7. Settings Modal */}
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

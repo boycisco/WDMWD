@@ -20,17 +20,15 @@ export function Composer({
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-grow textarea height up to 180px
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = 'auto';
-    const newHeight = Math.min(textarea.scrollHeight, 180);
+    const newHeight = Math.min(textarea.scrollHeight, 200);
     textarea.style.height = `${Math.max(newHeight, 44)}px`;
   }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Ctrl+Enter or Cmd+Enter sends the message
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit();
@@ -62,9 +60,10 @@ export function Composer({
   const canSend = value.trim().length > 0 && !isOverLimit && !disabled;
 
   return (
-    <div className="w-full max-w-[850px] mx-auto px-4 pb-4 sm:pb-6 pt-2">
-      <div className="relative flex flex-col rounded-2xl bg-[#0E1426]/95 border border-[#1E2945] focus-within:border-[#0052FF] transition-all shadow-[0_12px_40px_rgba(0,0,0,0.65)] p-2.5">
-        {/* Multiline textarea */}
+    <div className="w-full max-w-[800px] mx-auto px-4 pb-6 pt-2">
+      {/* Main Input Container */}
+      <div className="relative flex flex-col rounded-[24px] bg-[#141B30] border border-[#2A3B66] focus-within:border-[#4169FF]/60 focus-within:shadow-[0_0_20px_rgba(65,105,255,0.15)] transition-all shadow-lg p-2">
+        
         <textarea
           ref={textareaRef}
           value={value}
@@ -74,41 +73,37 @@ export function Composer({
           rows={1}
           disabled={disabled}
           maxLength={10500}
-          className="w-full bg-transparent text-[#F0F4FF] placeholder:text-[#627299] text-sm resize-none focus:outline-none px-2 py-1.5 leading-relaxed font-sans max-h-[180px] min-h-[44px]"
+          className="w-full bg-transparent text-[#F1F5F9] placeholder:text-[#718096] text-[15px] resize-none focus:outline-none px-3 py-2.5 leading-relaxed font-sans max-h-[200px] min-h-[44px]"
         />
 
-        {/* Footer controls inside composer */}
-        <div className="flex items-center justify-between pt-1.5 px-1 border-t border-[#1A2542] mt-1">
-          {/* Left badge indicator */}
+        {/* Footer row inside input */}
+        <div className="flex items-center justify-between px-2 pb-1 mt-1">
+          
+          {/* Left: Subtle Badge */}
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#080D1A] border border-[#1E2945] text-[10px] font-mono text-[#94A3C8] tracking-wider uppercase font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF] shadow-[0_0_6px_#0052FF]" />
-              BASE MAINNET
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0B0F14]/50 border border-[#253343] text-[10px] font-mono text-[#718096] tracking-wider uppercase font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#4169FF] shadow-[0_0_6px_#4169FF]" />
+              Base Mainnet
             </span>
-            <span className="hidden sm:inline text-[10px] text-[#627299]">
-              · Ctrl+Enter to send
-            </span>
-          </div>
-
-          {/* Right: Character count feedback + Send/Stop button */}
-          <div className="flex items-center gap-2">
             {isNearLimit && (
               <span
                 className={`text-[11px] font-mono ${
-                  isOverLimit ? 'text-[#F0F4FF] font-bold bg-[#F87171] px-1 rounded' : 'text-[#FBBF24]'
+                  isOverLimit ? 'text-[#F17878] font-bold' : 'text-[#E6B45D]'
                 }`}
               >
-                {charCount}/10,000
+                {charCount}/10k
               </span>
             )}
+          </div>
 
+          {/* Right: Action Button */}
+          <div className="flex items-center gap-2">
             {isStreaming ? (
               <button
                 type="button"
                 onClick={onStopGeneration}
-                className="h-8 w-8 rounded-xl bg-[#F87171]/20 hover:bg-[#F87171]/30 text-[#F87171] border border-[#F87171]/40 flex items-center justify-center transition-all cursor-pointer shadow-[0_0_12px_rgba(248,113,113,0.3)]"
+                className="w-8 h-8 rounded-full bg-[#F17878]/20 hover:bg-[#F17878]/30 text-[#F17878] border border-[#F17878]/30 flex items-center justify-center transition-all cursor-pointer"
                 title="Stop generation"
-                aria-label="Stop generation"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
               </button>
@@ -117,13 +112,12 @@ export function Composer({
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSend}
-                className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                   canSend
-                    ? 'bg-gradient-to-r from-[#0052FF] to-[#3888FF] text-white shadow-[0_0_18px_rgba(0,82,255,0.55)] hover:brightness-110 active:scale-95'
-                    : 'bg-[#121B32] text-[#627299] opacity-60 cursor-not-allowed border border-[#1E2945]'
+                    ? 'bg-[#F1F5F9] text-[#0B0F14] hover:bg-white active:scale-95 shadow-sm cursor-pointer'
+                    : 'bg-[#253343] text-[#718096] cursor-not-allowed'
                 }`}
                 title="Send message"
-                aria-label="Send message"
               >
                 <ArrowUp className="w-4 h-4" />
               </button>
