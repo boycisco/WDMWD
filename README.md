@@ -174,6 +174,8 @@ All endpoints are documented in detail in [docs/api.md](./docs/api.md). Summary:
 | GET | /api/chat | List sessions |
 | DELETE | /api/chat?sessionId=... | Delete a session and all dependent records |
 | GET | /api/wallet/[address] | Deterministic wallet investigation (no AI involved) |
+| `GET` | `/api/settings` | Retrieve configuration and UI preferences |
+| `PATCH` | `/api/settings` | Update UI preferences (e.g., `streamResponses`) |
 
 The /api/chat stream uses eight documented SSE event types: message.start, investigation.start, tool.start, tool.result, evidence, message.delta, message.complete, error, plus done for termination.
 
