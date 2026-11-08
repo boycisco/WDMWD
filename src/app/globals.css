@@ -1,49 +1,57 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "tailwindcss";
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg-main: #070B14;
+    --surface-main: #0E1424;
+    --surface-elevated: #141B30;
+    --surface-hover: #1A233D;
+    --border-subtle: #1E2945;
+    --border-highlight: #2A3B66;
+    --text-primary: #F0F4FF;
+    --text-secondary: #94A3C8;
+    --text-muted: #627299;
+    --accent-blue: #0052FF;
+    --accent-blue-bright: #3888FF;
+    --accent-blue-soft: #102148;
+    --accent-blue-glow: rgba(0, 82, 255, 0.4);
+    --accent-mint: #4ADE80;
+    --accent-mint-soft: #122B1E;
+    --color-error: #F87171;
+    --color-warning: #FBBF24;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 82, 255, 0.16) 0%, transparent 65%),
+      radial-gradient(circle at 85% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 15% 70%, rgba(74, 222, 128, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-space-grotesk), sans-serif;
   }
 }
 
-html {
-  height: 100%;
+/* Custom sleek Base blue scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+::-webkit-scrollbar-thumb {
+  background: #1E2945;
+  border-radius: 9999px;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: #2A3B66;
 }
