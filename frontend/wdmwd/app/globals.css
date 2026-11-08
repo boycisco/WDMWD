@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #070B14;
+    --surface-main: #0E1424;
+    --surface-elevated: #141B30;
+    --surface-hover: #1A233D;
+    --border-subtle: #1E2945;
+    --border-highlight: #2A3B66;
+    --text-primary: #F0F4FF;
+    --text-secondary: #94A3C8;
+    --text-muted: #627299;
+    --accent-blue: #0052FF;
+    --accent-blue-bright: #3888FF;
+    --accent-blue-soft: #102148;
+    --accent-blue-glow: rgba(0, 82, 255, 0.4);
+    --accent-mint: #4ADE80;
+    --accent-mint-soft: #122B1E;
+    --color-error: #F87171;
+    --color-warning: #FBBF24;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 82, 255, 0.16) 0%, transparent 65%),
+      radial-gradient(circle at 85% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 15% 70%, rgba(74, 222, 128, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-space-grotesk), sans-serif;
+  }
+}
+
+/* Custom sleek Base blue scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E2945;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2A3B66;
+}
