@@ -1,6 +1,0 @@
-{
-  "name": "WDMWD",
-  "description": "Personal onchain intelligence assistant for investigating wallet addresses, transactions, and fund movements on Base.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
