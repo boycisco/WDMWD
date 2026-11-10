@@ -85,6 +85,7 @@ export function addMessage(
       metadata: metadata ?? null,
     })
     .run();
+  // Bump session's updatedAt so listSessions orders correctly.
   db.update(sessionsTable)
     .set({ updatedAt: now })
     .where(eq(sessionsTable.id, sessionId))
@@ -114,7 +115,6 @@ export function getMessages(
     metadata: r.metadata ?? undefined,
   }));
 }
-
 
 // ─── Session statistics ────────────────────────────────────────
 

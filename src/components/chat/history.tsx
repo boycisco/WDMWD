@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, SquarePen, Trash2, MessageSquare } from 'lucide-react';
+import { X, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { ChatSession } from '@/types/api';
 import { formatRelativeTime } from '@/lib/format';
 
@@ -36,28 +36,42 @@ export function HistoryDrawer({
 
       {/* Drawer Panel */}
       <div
-        className={`fixed top-0 left-0 h-full w-[280px] sm:w-[320px] bg-[#0B0F14] border-r border-[#1E2945] z-50 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl ${
+        className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-[320px] sm:w-[320px] bg-[#0B0F14] z-50 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-5 shrink-0">
-          <h2 className="font-heading font-bold text-xl text-[#F1F5F9] tracking-tight">
-            WDMWD
+        {/* Header: History, + New, X */}
+        <div className="flex items-center justify-between px-4 py-4 shrink-0 border-b border-[#1E2945]/50">
+          <h2 className="font-heading font-semibold text-lg text-[#F1F5F9]">
+            History
           </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#A0AEC0] hover:text-[#F1F5F9] hover:bg-[#1C2938] transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onNewChat();
+                onClose();
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#0052FF]/15 text-[#60A5FA] hover:bg-[#0052FF]/25 transition-colors text-xs font-medium touch-manipulation active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full text-[#A0AEC0] hover:text-[#F1F5F9] hover:bg-[#1C2938] transition-colors touch-manipulation active:scale-95"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable History List */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {sessions.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-[#627299]">
-              No previous conversations.
+            // Matches your second screenshot exactly
+            <div className="flex-1 flex flex-col items-center justify-center h-full text-center mt-20">
+              <span className="text-sm text-[#627299]">No conversations yet.</span>
             </div>
           ) : (
             <div className="flex flex-col gap-0.5">
@@ -68,9 +82,9 @@ export function HistoryDrawer({
                     key={session.id}
                     onClick={() => {
                       onSelectSession(session.id);
-                      onClose(); // Auto-close on mobile
+                      onClose(); 
                     }}
-                    className={`group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+                    className={`group flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer transition-colors touch-manipulation ${
                       isActive
                         ? 'bg-[#1C2938] text-[#F1F5F9]'
                         : 'text-[#A0AEC0] hover:bg-[#111821] hover:text-[#F1F5F9]'
@@ -82,13 +96,12 @@ export function HistoryDrawer({
                         <span className="text-sm font-medium truncate">
                           {session.title || 'New Conversation'}
                         </span>
-                        <span className="text-[10px] text-[#627299] truncate">
+                        <span className="text-[10px] text-[#627299] truncate mt-0.5">
                           {formatRelativeTime(session.updatedAt)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Delete Button (shows on hover or if active) */}
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -106,20 +119,6 @@ export function HistoryDrawer({
               })}
             </div>
           )}
-        </div>
-
-        {/* Bottom Action Area */}
-        <div className="p-4 border-t border-[#1E2945] bg-[#0B0F14] shrink-0">
-          <button
-            onClick={() => {
-              onNewChat();
-              onClose();
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#0052FF] hover:bg-[#3888FF] text-white font-medium text-sm transition-all shadow-[0_4px_20px_rgba(0,82,255,0.25)] active:scale-[0.98]"
-          >
-            <SquarePen className="w-4 h-4" />
-            New Chat
-          </button>
         </div>
       </div>
     </>

@@ -60,9 +60,9 @@ export function Composer({
   const canSend = value.trim().length > 0 && !isOverLimit && !disabled;
 
   return (
-    <div className="w-full max-w-[800px] mx-auto px-4 pb-6 pt-2">
+    <div className="w-full max-w-[800px] mx-auto px-3 sm:px-4 pb-6 pt-2">
       {/* Main Input Container */}
-      <div className="relative flex flex-col rounded-[24px] bg-[#141B30] border border-[#2A3B66] focus-within:border-[#4169FF]/60 focus-within:shadow-[0_0_20px_rgba(65,105,255,0.15)] transition-all shadow-lg p-2">
+      <div className="relative flex flex-col rounded-[24px] bg-[#141B30] border border-[#2A3B66] focus-within:border-[#4169FF]/60 focus-within:shadow-[0_0_20px_rgba(65,105,255,0.15)] transition-all shadow-lg p-2 sm:p-3">
         
         <textarea
           ref={textareaRef}
@@ -73,18 +73,20 @@ export function Composer({
           rows={1}
           disabled={disabled}
           maxLength={10500}
-          className="w-full bg-transparent text-[#F1F5F9] placeholder:text-[#718096] text-[15px] resize-none focus:outline-none px-3 py-2.5 leading-relaxed font-sans max-h-[200px] min-h-[44px]"
+          className="w-full bg-transparent text-[#F1F5F9] placeholder:text-[#718096] text-[15px] resize-none focus:outline-none px-2 sm:px-3 py-2.5 leading-relaxed font-sans max-h-[200px] min-h-[44px]"
         />
 
         {/* Footer row inside input */}
         <div className="flex items-center justify-between px-2 pb-1 mt-1">
           
-          {/* Left: Subtle Badge */}
+          {/* Left: Premium Badge */}
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0B0F14]/50 border border-[#253343] text-[10px] font-mono text-[#718096] tracking-wider uppercase font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4169FF] shadow-[0_0_6px_#4169FF]" />
-              Base Mainnet
-            </span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1C2938]/80 border border-[#2A3B66]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF] shadow-[0_0_6px_#0052FF]" />
+              <span className="text-[11px] font-medium text-[#A0AEC0] tracking-wide">
+                Base Mainnet
+              </span>
+            </div>
             {isNearLimit && (
               <span
                 className={`text-[11px] font-mono ${
@@ -102,24 +104,24 @@ export function Composer({
               <button
                 type="button"
                 onClick={onStopGeneration}
-                className="w-8 h-8 rounded-full bg-[#F17878]/20 hover:bg-[#F17878]/30 text-[#F17878] border border-[#F17878]/30 flex items-center justify-center transition-all cursor-pointer"
+                className="w-10 h-10 rounded-full bg-[#F17878]/20 hover:bg-[#F17878]/30 text-[#F17878] border border-[#F17878]/30 flex items-center justify-center transition-all touch-manipulation active:scale-95 cursor-pointer"
                 title="Stop generation"
               >
-                <Square className="w-3.5 h-3.5 fill-current" />
+                <Square className="w-4 h-4 fill-current" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSend}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all touch-manipulation ${
                   canSend
                     ? 'bg-[#F1F5F9] text-[#0B0F14] hover:bg-white active:scale-95 shadow-sm cursor-pointer'
                     : 'bg-[#253343] text-[#718096] cursor-not-allowed'
                 }`}
                 title="Send message"
               >
-                <ArrowUp className="w-4 h-4" />
+                <ArrowUp className="w-5 h-5" />
               </button>
             )}
           </div>

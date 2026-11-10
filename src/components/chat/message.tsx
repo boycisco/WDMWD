@@ -32,7 +32,8 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
   if (isUser) {
     return (
       <div className="w-full flex justify-end mb-6 group">
-        <div className="relative max-w-[85%] sm:max-w-[75%] rounded-3xl bg-[#17212D] border border-[#253343] px-5 py-3.5 text-[15px] text-[#F1F5F9] leading-relaxed shadow-sm">
+        {/* Added break-words */}
+        <div className="relative max-w-[85%] sm:max-w-[75%] rounded-3xl bg-[#17212D] border border-[#253343] px-5 py-3.5 text-[15px] text-[#F1F5F9] leading-relaxed shadow-sm break-words">
           <div className="whitespace-pre-wrap">{message.content}</div>
           <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px] text-[#718096] font-mono select-none">
             <span>{formatTimeOnly(message.createdAt)}</span>
@@ -42,12 +43,16 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
     );
   }
 
+  // Assistant message - ChatGPT style
   return (
-    <div className="w-full flex gap-4 mb-8 group text-[#F1F5F9]">
+    // Stack on mobile, row on desktop
+    <div className="w-full flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 group text-[#F1F5F9]">
+      {/* Avatar */}
       <div className="w-8 h-8 rounded-full bg-[#0B0F14] border border-[#253343] flex items-center justify-center shrink-0 mt-0.5">
         <span className="w-2.5 h-2.5 rounded-full bg-[#0052FF] shadow-[0_0_8px_#0052FF]" />
       </div>
 
+      {/* Content Column */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-heading font-semibold text-sm text-[#F1F5F9]">WDMWD</span>
@@ -58,7 +63,7 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
               className="p-1 rounded-md text-[#718096] hover:text-[#F1F5F9] hover:bg-[#1C2938] transition-colors"
               title="Copy response"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#B7F36B]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-[#4ADE80]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
@@ -67,8 +72,8 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
           <InvestigationActivity steps={message.steps} isStreaming={message.isStreaming} />
         )}
 
-        {/* Markdown Text */}
-        <div className="prose prose-invert max-w-none text-[15px] text-[#E2E8F0] leading-7 prose-p:leading-7 prose-headings:font-heading prose-headings:font-semibold prose-headings:text-[#F1F5F9] prose-h3:text-lg prose-h4:text-base prose-ul:my-4 prose-li:my-1.5 prose-strong:text-[#F1F5F9] prose-code:text-[#93C5FD] prose-code:bg-[#17212D] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[13px] prose-pre:bg-[#0B0F14] prose-pre:border prose-pre:border-[#253343] prose-pre:rounded-xl">
+        {/* Markdown Text - Added break-words */}
+        <div className="prose prose-invert max-w-none text-[15px] text-[#E2E8F0] leading-7 break-words prose-p:leading-7 prose-headings:font-heading prose-headings:font-semibold prose-headings:text-[#F1F5F9] prose-h3:text-lg prose-h4:text-base prose-ul:my-4 prose-li:my-1.5 prose-strong:text-[#F1F5F9] prose-code:text-[#93C5FD] prose-code:bg-[#17212D] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[13px] prose-pre:bg-[#0B0F14] prose-pre:border prose-pre:border-[#253343] prose-pre:rounded-xl prose-pre:overflow-x-auto">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -76,20 +81,20 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
                 const codeString = String(children).replace(/\n$/, '').trim();
                 if (isValidAddress(codeString)) {
                   return (
-                    <span className="inline-flex items-center gap-1 bg-[#17212D] text-[#93C5FD] px-2 py-0.5 rounded-md border border-[#253343] font-mono text-[13px] hover:border-[#4169FF]/50 transition-colors">
-                      <span>{codeString}</span>
-                      <button onClick={() => handleCopy(codeString, 'address')} className="hover:text-white p-0.5"><Copy className="w-3 h-3" /></button>
-                      <button onClick={() => onInspectAddress?.(codeString)} className="hover:text-[#B7F36B] p-0.5"><Search className="w-3 h-3" /></button>
-                      <a href={getBasescanAddressUrl(codeString)} target="_blank" rel="noreferrer" className="hover:text-white p-0.5"><ExternalLink className="w-3 h-3" /></a>
+                    <span className="inline-flex items-center gap-1 bg-[#17212D] text-[#93C5FD] px-2 py-0.5 rounded-md border border-[#253343] font-mono text-[13px] hover:border-[#0052FF]/50 transition-colors break-all">
+                      <span className="truncate max-w-[150px] sm:max-w-none">{codeString}</span>
+                      <button onClick={() => handleCopy(codeString, 'address')} className="hover:text-white p-0.5 shrink-0"><Copy className="w-3 h-3" /></button>
+                      <button onClick={() => onInspectAddress?.(codeString)} className="hover:text-[#B7F36B] p-0.5 shrink-0"><Search className="w-3 h-3" /></button>
+                      <a href={getBasescanAddressUrl(codeString)} target="_blank" rel="noreferrer" className="hover:text-white p-0.5 shrink-0"><ExternalLink className="w-3 h-3" /></a>
                     </span>
                   );
                 }
                 if (isValidTxHash(codeString)) {
                   return (
-                    <span className="inline-flex items-center gap-1 bg-[#17212D] text-[#B7F36B] px-2 py-0.5 rounded-md border border-[#253343] font-mono text-[13px] hover:border-[#B7F36B]/50 transition-colors">
-                      <span>{codeString}</span>
-                      <button onClick={() => handleCopy(codeString, 'hash')} className="hover:text-white p-0.5"><Copy className="w-3 h-3" /></button>
-                      <a href={getBasescanTxUrl(codeString)} target="_blank" rel="noreferrer" className="hover:text-white p-0.5"><ExternalLink className="w-3 h-3" /></a>
+                    <span className="inline-flex items-center gap-1 bg-[#17212D] text-[#B7F36B] px-2 py-0.5 rounded-md border border-[#253343] font-mono text-[13px] hover:border-[#B7F36B]/50 transition-colors break-all">
+                      <span className="truncate max-w-[150px] sm:max-w-none">{codeString}</span>
+                      <button onClick={() => handleCopy(codeString, 'hash')} className="hover:text-white p-0.5 shrink-0"><Copy className="w-3 h-3" /></button>
+                      <a href={getBasescanTxUrl(codeString)} target="_blank" rel="noreferrer" className="hover:text-white p-0.5 shrink-0"><ExternalLink className="w-3 h-3" /></a>
                     </span>
                   );
                 }
@@ -109,9 +114,9 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
         </div>
 
         {message.evidence && message.evidence.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-[#253343]">
+          <div className="mt-4 pt-3 border-t border-[#1E2945]">
             <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-[#718096] mb-2">
-              <FileText className="w-3.5 h-3.5 text-[#4169FF]" />
+              <FileText className="w-3.5 h-3.5 text-[#0052FF]" />
               <span>Sources ({message.evidence.length})</span>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide items-center">
@@ -133,7 +138,7 @@ export function MessageBubble({ message, onInspectAddress, onInspectEvidence }: 
 
         {message.isStreaming && !message.content && (!message.steps || message.steps.length === 0) && (
           <div className="flex items-center gap-2 text-sm text-[#A0AEC0] py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4169FF] animate-pulse shadow-[0_0_6px_#4169FF]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF] animate-pulse shadow-[0_0_6px_#0052FF]" />
             <span>Thinking...</span>
           </div>
         )}
