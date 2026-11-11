@@ -27,17 +27,17 @@ export function EmptyState({ onSelectPrompt }: EmptyStateProps) {
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[800px] mx-auto animate-in fade-in duration-500">
+    <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[800px] mx-auto animate-in fade-in duration-500 h-full">
       
-      <h1 className="font-heading text-4xl sm:text-5xl font-bold text-[#F1F5F9] mb-4 text-center tracking-tight px-4">
+      {/* Scaled text down slightly for mobile to prevent scrolling */}
+      <h1 className="font-heading text-3xl sm:text-5xl font-bold text-[#F1F5F9] mb-3 sm:mb-4 text-center tracking-tight px-4">
         What Did My Wallet Do?
       </h1>
-      <p className="text-[#A0AEC0] text-base sm:text-lg text-center mb-10 max-w-3xl mx-auto leading-relaxed text-balance px-4">
+      <p className="text-[#A0AEC0] text-sm sm:text-lg text-center mb-6 sm:mb-10 max-w-3xl mx-auto leading-relaxed text-balance px-4">
         Investigate any Base wallet or transaction using natural language.
       </p>
 
-      {/* Horizontal scroll container on mobile, centered on desktop */}
-      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-12">
+      <div className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="flex flex-row flex-nowrap sm:flex-wrap items-center justify-start sm:justify-center gap-2 sm:gap-3 min-w-max sm:min-w-0 px-4 sm:px-0">
           {suggestions.map((s, i) => (
             <button

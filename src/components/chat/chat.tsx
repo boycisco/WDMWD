@@ -61,16 +61,16 @@ export function ChatApp() {
   const isEmpty = messages.length === 0 && !loadingHistory;
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-transparent text-[#F0F4FF] overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-[#0B0F14] sm:bg-transparent text-[#F0F4FF] overflow-hidden">
       
       <Header
-        onToggleHistory={() => setHistoryOpen(!historyOpen)}
+        onToggleHistory={() => setHistoryOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         health={health}
         historyOpen={historyOpen}
       />
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col relative">
+      <main className={`flex-1 flex flex-col min-h-0 relative z-0 ${isEmpty ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
         <div className="w-full max-w-[850px] mx-auto flex-1 flex flex-col px-3 sm:px-6">
           {loadingHistory && !isStreaming ? (
             <div className="flex-1 flex items-center justify-center text-xs text-[#627299]">
@@ -100,6 +100,7 @@ export function ChatApp() {
         isStreaming={isStreaming}
       />
 
+      {/* Drawers & Modals */}
       <HistoryDrawer
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}

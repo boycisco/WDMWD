@@ -1,4 +1,4 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import { Space_Grotesk, Inter } from 'next/font/google';
 import './globals.css';
 
@@ -29,10 +29,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${spaceGrotesk.variable} ${inter.variable}`}>
-      <body className="bg-[#070B14] text-[#F0F4FF] font-sans antialiased min-h-screen selection:bg-[#0052FF]/30 selection:text-white overflow-x-hidden" suppressHydrationWarning>
+      {/* Replaced min-h-screen with h-[100dvh] overflow-hidden */}
+      <body className="bg-[#070B14] text-[#F0F4FF] font-sans antialiased h-[100dvh] overflow-hidden selection:bg-[#0052FF]/30 selection:text-white" suppressHydrationWarning>
         {children}
       </body>
     </html>
