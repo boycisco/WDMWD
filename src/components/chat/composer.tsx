@@ -61,8 +61,13 @@ export function Composer({
 
   return (
     <div className="w-full max-w-[800px] mx-auto px-3 sm:px-4 pb-4 sm:pb-6 shrink-0 z-20">
-      <div className="relative flex flex-col rounded-[24px] bg-[#141B30] border border-[#2A3B66] focus-within:border-[#4169FF]/60 focus-within:shadow-[0_0_20px_rgba(65,105,255,0.15)] transition-all shadow-lg p-2 sm:p-3">
-        
+      
+      {/* Disclaimer - Moved above the input box */}
+      <p className="text-center text-[11px] text-[#627299] mb-2.5 font-sans">
+        WDMWD can make mistakes. Check important info.
+      </p>
+
+      <div className="relative flex flex-col rounded-[24px] bg-[#141B30] border border-[#2A3B66] focus-within:border-[#4169FF]/60 focus-within:shadow-[0_0_20px_rgba(65,105,255,0.15)] transition-all shadow-lg p-2 sm:p-3">        
         <textarea
           ref={textareaRef}
           value={value}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Check, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Loader2, Search } from 'lucide-react';
 import { InvestigationStep } from '@/types/api';
 import { getToolDisplayName } from '@/lib/format';
 
@@ -19,35 +19,46 @@ export function InvestigationActivity({ steps = [], isStreaming }: ActivityProps
   const allCompleted = completedCount === steps.length;
 
   return (
-    <div className="mb-3 text-sm">
+    <div className="mb-4 text-sm">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 text-[#A0AEC0] hover:text-[#F1F5F9] transition-colors group cursor-pointer"
       >
         {isStreaming && !allCompleted ? (
-          <Loader2 className="w-4 h-4 animate-spin text-[#4169FF]" />
+          <Loader2 className="w-4 h-4 animate-spin text-[#0052FF]" />
         ) : (
-          <Check className="w-4 h-4 text-[#B7F36B]" />
+          <Check className="w-4 h-4 text-[#4ADE80]" />
         )}
         <span className="font-medium">
           {isStreaming && !allCompleted
             ? 'Investigating onchain data...'
-            : `Investigated ${steps.length} source${steps.length > 1 ? 's' : ''}`}
+            : `Investigation complete`}
         </span>
-        <span className="text-xs text-[#718096] group-hover:text-[#A0AEC0] ml-1 flex items-center gap-1">
+        <span className="text-xs text-[#627299] group-hover:text-[#A0AEC0] ml-1 flex items-center gap-1">
           {expanded ? 'Hide details' : 'Show details'}
           {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </span>
       </button>
 
       {expanded && (
-        <div className="mt-3 pl-6 flex flex-col gap-2 border-l border-[#253343]">
+        <div className="mt-3 pl-3 flex flex-col gap-3 border-l-2 border-[#1E2945]">
           {steps.map((step, idx) => (
-            <div key={`${step.tool}-${idx}`} className="flex items-center gap-2 text-xs text-[#A0AEC0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#B7F36B] opacity-50" />
-              <span>{getToolDisplayName(step.tool)}</span>
-              {step.summary && <span className="text-[#718096] truncate max-w-sm">— {step.summary}</span>}
+            <div key={`${step.tool}-${idx}`} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-xs">
+                <Search className="w-3.5 h-3.5 text-[#60A5FA]" />
+                <span className="font-medium text-[#F1F5F9]">
+                  {getToolDisplayName(step.tool)}
+                </span>
+                <span className="text-[#4ADE80] text-[10px] uppercase tracking-wider font-mono bg-[#4ADE80]/10 px-1.5 py-0.5 rounded">
+                  {step.status}
+                </span>
+              </div>
+              {step.summary && (
+                <p className="text-xs text-[#A0AEC0] pl-5 leading-relaxed font-mono">
+                  {step.summary}
+                </p>
+              )}
             </div>
           ))}
         </div>
