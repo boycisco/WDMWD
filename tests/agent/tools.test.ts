@@ -52,9 +52,9 @@ beforeEach(async () => {
       ],
       evidence: [
         {
-          id: "ev_tx_1",
+          id: "ev_1",
           chainId: 8453,
-          type: "receipt",
+          type: "transfer",
           classification: "confirmed",
           data: {},
           source: "test",
@@ -128,8 +128,14 @@ describe("agent tools — executeTool", () => {
     expect(data.investigationId).toBe("inv-test");
     const summary = data.summary as Record<string, unknown>;
     expect(summary.incomingCount).toBe(3);
-    const findings = data.findings as Array<{ id: string }>;
-    expect(findings[0]!.id).toBe("f_summary");
+    const findings = data.findings as Array<{
+      title: string;
+      explanation: string;
+      classification: string;
+    }>;
+    expect(findings[0]!.title).toBe("Summary");
+    expect(findings[0]!.explanation).toBe("test");
+    expect(findings[0]!.classification).toBe("confirmed");
   });
 
   it("returns ok:false for unknown tool", async () => {
@@ -154,7 +160,6 @@ describe("agent tools — executeTool", () => {
   });
 
   it("never throws, even on internal handler failure", async () => {
-    // One-shot override: throws only for the next call.
     const { investigateWallet } = await import("@/wallet/investigate");
     vi.mocked(investigateWallet).mockImplementationOnce(async () => {
       throw new Error("Upstream timeout");
@@ -188,16 +193,25 @@ describe("agent tools — executeTool", () => {
     expect(result.error?.message).toMatch(/hash/i);
   });
 
-  it("wallet tool omits the flat evidenceIds array (payload trim)", async () => {
+  it("wallet tool trims the model payload (no flat evidenceIds, evidence on separate field)", async () => {
     const { executeTool } = await import("@/agent/tools");
     const result = await executeTool("wallet", {
       address: "0x4200000000000000000000000000000000000010",
     });
     expect(result.ok).toBe(true);
     const data = result.data as Record<string, unknown>;
-    const findings = data.findings as Array<{ evidenceIds: string[] }>;
-    expect(findings[0]!.evidenceIds.length).toBeGreaterThan(0);
+
     expect(data.evidenceIds).toBeUndefined();
-    expect(data.evidenceCount).toBeDefined();
+
+    const findings = data.findings as Array<Record<string, unknown>>;
+    expect(findings[0]!.id).toBeUndefined();
+    expect(findings[0]!.evidenceIds).toBeUndefined();
+    expect(findings[0]!.limitations).toBeUndefined();
+
+    expect(data.evidenceCount).toBeGreaterThan(0);
+
+    expect(result.evidence).toBeDefined();
+    expect(result.evidence!.length).toBeGreaterThan(0);
+    expect(result.evidence![0]!.id).toBe("ev_1");
   });
 });

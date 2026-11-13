@@ -13,10 +13,10 @@ services:
     env_file:
       - .env
     environment:
-      # These override .env defaults to match the container's bind address
       HOST: "0.0.0.0"
       REMOTE_ACCESS: "true"
       DATABASE_URL: "file:/app/data/wdmwd.db"
+      NODE_ENV: "production"
     volumes:
       # Named volume so the SQLite database survives `docker compose down`
       - wdmwd-data:/app/data

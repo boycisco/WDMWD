@@ -10,7 +10,21 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 COPY package.json package-lock.json ./
 RUN npm ci
 
+
 COPY . .
+# Build-time env placeholders — satisfy the config validator during
+# `next build`. Real values are injected at runtime via compose's
+# `env_file: .env`. These are NOT baked into the image layer (they're
+# only in the build stage, which is discarded).
+ARG GEMINI_API_KEY=build-time-placeholder
+ARG OPENAI_API_KEY=build-time-placeholder
+ARG ALCHEMY_API_KEY=build-time-placeholder
+ARG BASE_RPC_URL=https://mainnet.base.org
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+ENV ALCHEMY_API_KEY=$ALCHEMY_API_KEY
+ENV BASE_RPC_URL=$BASE_RPC_URL
+
 RUN npm run build
 
 # ─── Runner ────────────────────────────────────────────────────
@@ -47,4 +61,4 @@ EXPOSE 3000
 
 # Run migrations then start the server. Migrations are idempotent —
 # if the DB is already up to date, they no-op.
-CMD ["sh", "-c", "npx drizzle-kit migrate && node server.js"]
+CMD ["sh", "-c", "npx drizzle-kit migrate && exec node server.js"]

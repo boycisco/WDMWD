@@ -11,7 +11,14 @@
  */
 
 export async function register(): Promise<void> {
+  console.log(
+    "[instrumentation] register() invoked, runtime:",
+    process.env.NEXT_RUNTIME,
+  );
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./instrumentation-node");
+    console.log(
+      "[instrumentation] node module loaded, SIGTERM handler registered",
+    );
   }
 }
