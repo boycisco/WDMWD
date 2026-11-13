@@ -1,100 +1,84 @@
-# Blockchain Integration
+# Blockchain Data
 
-Base mainnet only in V1. Adding more EVM chains is a 20-line change.
+WDMWD V1 investigates **Base Mainnet**, identified by chain ID `8453`.
 
----
+The application separates blockchain access from investigation logic through provider adapters. The reported implementation uses Viem for RPC operations and Alchemy for indexed/historical activity.
 
-## Chain registry
+## Providers
 
-`src/chain/` defines:
+### Viem and Base RPC
 
-- `Chain` interface — `{ id, name, rpcUrl, explorerUrl, nativeCurrency }`
-- `base.ts` — the Base instance
-- `registry.ts` — `getChain(chainId)`, `hasChain(chainId)`, `listChains()`
+Viem is used to interact with the configured Base JSON-RPC endpoint for chain data required by the application, including transaction and block-level queries.
 
-**Adding a chain:**
+The documented public Base RPC fallback is:
 
-1. Create `src/chain/optimism.ts`:
-
-```typescript
-export const optimism: Chain = Object.freeze({
-  id: 10,
-  name: "Optimism",
-  rpcUrl: "https://mainnet.optimism.io",
-  explorerUrl: "https://optimistic.etherscan.io",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-});
+```text
+https://mainnet.base.org
 ```
 
-2. Add one line in `src/chain/registry.ts`:
+Operators may configure a different endpoint using `BASE_RPC_URL`.
 
-```typescript
-[optimism.id, optimism],
-```
+### Alchemy
 
-If you need Alchemy for historical data, add an entry to `ALCHEMY_HOST_BY_CHAIN` in `src/data/alchemy.ts`.
+Alchemy is used for indexed and historical wallet activity. Configure `ALCHEMY_API_KEY` when using the Alchemy-backed history path.
 
-Nothing else changes. Not the agent, not the investigation modules, not the tools. The registry is the entire surface.
+Provider-specific code should remain inside the data adapter layer. Wallet and transaction investigation logic should consume normalized application data rather than depending directly on provider response shapes.
 
-## RPC adapter (`src/data/rpc.ts`)
+## Supported V1 investigations
 
-Wraps Viem's `createPublicClient`. Exposes:
+### Wallet activity
 
-- `getBlockNumber()` — health check
-- `getChainId()` — sanity check
-- `getTransaction(hash)` — returns `Transaction | null`
-- `getTransactionReceipt(hash)` — returns `TransactionReceipt | null`
-- `getBytecode(address)` — for contract-vs-EOA classification
+The current wallet investigation path works with indexed transfer activity, including the supported native and token transfer event categories described by the implementation:
 
-The adapter accepts an injectable `Transport` so tests can run without real network calls. Production uses `http(url, { timeout, retryCount, retryDelay })`.
+- Native asset transfers.
+- ERC-20 transfers.
+- ERC-721 transfers.
+- ERC-1155 transfers.
 
-Viem returns typed errors (`TransactionNotFoundError`) for missing records — the adapter converts those to `null` and lets anything else throw. This is a deliberate distinction: "not found" is a valid answer, "RPC timed out" is not.
+The wallet result can include transfer counts, counterparties, interacted contracts, block range, and totals grouped by token symbol where the source data supports them.
 
-RPC URL precedence:
+The result is constrained by the configured provider's indexing coverage and the requested history limit.
 
-1. `BASE_RPC_URL` env var (if set)
-2. Chain's `rpcUrl` fallback (`https://mainnet.base.org`)
+### Transaction inspection
 
-This lets a user set their own RPC endpoint without touching code.
+The transaction investigation path reports available transaction-level details such as:
 
-## Alchemy adapter (`src/data/alchemy.ts`)
+- Transaction hash.
+- Sender and recipient.
+- Success or reverted status.
+- ETH value.
+- Gas cost.
+- Whether the destination is identified as a contract or an externally owned account (EOA).
+- Event-log information available to the current implementation.
 
-Uses `alchemy_getAssetTransfers` for historical wallet activity. This is not a standard JSON-RPC method — it lives in Alchemy's extended namespace. The adapter calls it via `fetch()` directly against `https://base-mainnet.g.alchemy.com/v2/<key>`.
+V1 does not provide complete ABI decoding of every event into a semantic list of token transfers. An event being present is not, by itself, a complete explanation of the token movement.
 
-Categories handled: `external` (native ETH), `erc20`, `erc721`, `erc1155`.
+## Exact amount handling
 
-Pagination: loops until `pageKey` is exhausted or `MAX_PAGES=10` is hit. Cap at 1,000 transfers per call.
+Blockchain quantities are integers. Converting token amounts to JavaScript floating-point numbers can lose precision, especially for assets with many decimal places or large values.
 
-Provider response normalization: the adapter converts Alchemy's response into `RawTransfer[]` before returning. Callers never see `alchemy_getAssetTransfers` shapes.
+The reported Alchemy implementation avoids relying on the floating-point `value` field for exact token amounts. It reads the raw contract value represented as hexadecimal, converts it to `BigInt`, and stores an exact decimal-string representation. Token decimals are then used when presenting human-readable values.
 
-## Exact amounts — the one rule that cannot be broken
+Do not replace this path with `Number()` arithmetic for raw token quantities.
 
-Alchemy's `value` field is a JS number and is unsafe for financial amounts. The adapter ignores it entirely. Instead, it reads `rawContract.value` (hex string → bigint) and `rawContract.decimal` (hex string → number) and formats via integer division.
+## Data limitations
 
-```typescript
-// From src/data/alchemy.ts
-const rawAmount = BigInt("0x" + clean);  // NEVER parseFloat
-const formatted = formatAmount(rawAmount, decimals);  // string manipulation
-```
+The current V1 wallet investigation is based on supported indexed transfer activity. The project report identifies these limitations:
 
-The result is stored as `TokenAmount.raw` (decimal string, e.g. `"1500000000000000000"` for 1.5 ETH). Consumers doing math must `BigInt(raw)` — never `Number(raw)`.
+- Internal movements between contracts may not be represented by the indexed transfer path.
+- Activity outside the provider's available history window may be missing.
+- Zero-value calls are not included in the transfer activity view.
+- Provider indexing, rate limits, and outages can affect completeness.
+- Transaction event logs are not fully decoded into all token-level semantic movements.
 
-This is tested (`tests/data/alchemy.test.ts` → "uses rawContract for exact ETH amount, ignores float value"). Don't relax it.
+A missing record means the current data path did not return it. It is not proof that no onchain activity occurred.
 
-## Transaction investigation (`src/transaction/investigate.ts`)
+## Network scope
 
-Uses only `RpcClient` — no Alchemy needed. Fast and cheap.
+Only Base Mainnet is configured in V1. The chain registry provides an extension point, but Ethereum, Optimism, Arbitrum, and other networks are not supported merely because they are EVM-compatible.
 
-Classifies the recipient as `contract` / `eoa` / `deployment` by calling `getBytecode` on the `to` address. Empty bytecode = EOA. Non-empty = contract. `to === null` = deployment.
+The chat request accepts `chainId`, but callers should use `8453` unless and until another chain is explicitly registered and implemented.
 
-Reports the top-level `tx.value` separately from receipt event logs. Never conflates them. A contract call that moves tokens internally will show `value: 0` at the top level but have `Transfer` events in the receipt — the user needs both to understand what happened.
+## Read-only behaviour
 
-Individual event log parameters (which token, how much, to whom) are not decoded in V1. That's future work — see `docs/evidence.md` for what that would look like.
-
-## Provider failure handling
-
-All errors from RPC/Alchemy become typed `RpcError` or `IndexerError`. The health endpoint catches these and reports `status: "error"` — it does not crash. The `/api/wallet/[address]` endpoint returns `502` with a user-safe message.
-
-Rate limits: the public `mainnet.base.org` endpoint allows roughly 5–10 requests/sec. Alchemy free tier allows ~330 CU/sec. For production or heavy use, provide your own Alchemy project or a private RPC.
-
-Base block time: ~2 seconds. If you're polling for "new activity since last check", you'll see updates quickly but consume quota quickly too. WDMWD doesn't poll — it queries on demand.
+WDMWD is an investigation application. Its blockchain integration reads public chain and indexer data. It does not request private keys, sign transactions, broadcast transactions, or move funds.

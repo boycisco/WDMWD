@@ -1,82 +1,59 @@
 # Security Policy
 
-## Reporting a Vulnerability
+WDMWD is a local-first, read-only onchain investigation application. It does not request wallet private keys, sign transactions, or broadcast transactions. It does process conversation content and retrieved onchain context, so operators should still treat the local database and provider credentials as sensitive.
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+## Supported versions
 
-If you discover a vulnerability in WDMWD, please report it privately:
+Security reports should target the latest maintained version or the current default branch. The project does not promise security fixes for every historical revision.
 
-1. Open a [GitHub Security Advisory](https://github.com/boycisco/WDMWD/security/advisories/new) on this repository, or
-2. Contact the maintainer directly through the email address on their GitHub profile.
+## Reporting a vulnerability
 
-Include in your report:
+**Do not publish security vulnerabilities in a public issue or pull request.**
 
-- A description of the vulnerability
-- Steps to reproduce (proof of concept if possible)
-- Affected version(s) or commit hash
-- Your assessment of impact and severity
-- Any suggested mitigation
+Use GitHub's private vulnerability reporting feature for this repository when it is enabled. If private reporting is not available, contact the repository maintainer through an existing private contact channel and avoid posting exploit details publicly.
 
-You can expect:
+Include, where possible:
 
-- Acknowledgement within **72 hours**
-- A remediation plan within **7 days** for confirmed issues
-- Credit in the release notes (unless you prefer to remain anonymous)
+- A clear description of the issue.
+- The affected version or commit.
+- Steps to reproduce the behaviour.
+- The impact and realistic attack conditions.
+- A suggested mitigation, if known.
 
-## Supported Versions
+Do not include real API keys, private user data, or other secrets in a report. Redact them from logs and screenshots.
 
-WDMWD is under active development. Only the latest commit on `main` is supported. There are no LTS branches.
+## Deployment and access control
 
-## Security Model
+The documented default bind address is `127.0.0.1`. Non-loopback access requires an explicit `REMOTE_ACCESS=true` configuration decision.
 
-WDMWD is a **read-only onchain intelligence assistant**. It is designed to be safe by default for a single user running locally. The threat model below describes what the project defends against and what it explicitly does not.
+Enabling remote access does not add authentication, TLS, or a public-facing access-control layer. Do not expose the application port directly to the public internet. Use a properly configured reverse proxy or private network with HTTPS and authentication, and restrict access at the network layer.
 
-### What WDMWD never does
+## Secrets and configuration
 
-- Requests or stores private keys or seed phrases
-- Signs or broadcasts transactions
-- Moves funds
-- Uploads wallet addresses to a WDMWD-owned service
+- Keep `.env` out of version control.
+- Use `.env.example` only for non-secret placeholders.
+- Do not place API keys in `NEXT_PUBLIC_*` variables.
+- Do not commit SQLite databases, database backups, logs, or provider responses that contain private information.
+- Rotate a credential immediately if it is exposed in source control, logs, screenshots, or an issue.
+- Do not return secret values from API endpoints or include them in error messages.
 
-### Default deployment
+## Data and privacy
 
-- Server binds to `127.0.0.1` (loopback only)
-- No authentication is required because only the local machine can reach the API
-- All data (conversations, evidence, settings) lives in a local SQLite file
+WDMWD stores conversations and investigation data in its local SQLite database. The application sends prompts and relevant retrieved context to the AI provider configured by the operator. Blockchain queries are sent to the configured RPC and indexing providers.
 
-### Remote deployment
+Operators should review the privacy and data-retention terms of their configured providers. Protect the SQLite database and backups as user data. Anyone with access to the local application or its database may be able to read stored conversation content.
 
-If you bind the server to a public interface (`HOST=0.0.0.0`), you **must**:
+## Security considerations
 
-- Set `REMOTE_ACCESS=true` explicitly (the config loader refuses to start otherwise)
-- Place the server behind a reverse proxy that terminates TLS
-- Add authentication (HTTP Basic, OAuth proxy, or similar) at the proxy layer
-- **Do not** expose the `/api/chat` endpoint unauthenticated — it consumes paid API credits
+Review changes involving:
 
-WDMWD does **not** ship built-in authentication. This is deliberate: single-owner self-hosting with a reverse proxy is the expected pattern, and shipping a half-baked auth system would be worse than none.
+- Remote binding, host validation, and CORS.
+- API request validation and request-size limits.
+- Rate limits and agent execution limits.
+- Session identifiers and session deletion.
+- SQLite paths and file permissions.
+- Provider credentials and error logging.
+- Model tool calls and tool argument validation.
+- Untrusted text returned by blockchain contracts, token metadata, and external providers.
 
-### Secrets handling
-
-- API keys are read from environment variables only
-- `.env` is gitignored; `.env.example` documents the variables without values
-- The `/api/settings` endpoint returns only `*Configured: true/false` flags, never actual keys
-- Errors returned to clients never contain API keys, tokens, or full stack traces
-
-### Known limitations relevant to security
-
-- **Provider trust**: WDMWD trusts the configured RPC provider (Base mainnet public endpoint or your own Alchemy project) to return accurate blockchain data. A compromised provider could serve false data. For high-stakes use, run your own Base node.
-- **Model trust**: The AI provider (Google Gemini, or OpenAI if configured) receives the content of your conversations. Local models are not yet supported. Do not paste secrets into the chat.
-- **Prompt injection via blockchain data**: Token symbols, contract names, and event data are untrusted input. The system prompt instructs the model to ignore instructions embedded in blockchain data, but no LLM defense is perfect. Treat any model output as advisory and verify against the cited evidence.
-- **Rate limits**: The Gemini free tier is intended for personal use only. Do not run WDMWD as a public service on free-tier credentials.
-
-### Development dependencies
-
-`npm audit` reports moderate-severity issues in dev dependencies (ESLint tooling). These affect the development environment only and are not part of the shipped application. Production dependencies (`--omit=dev`) audit clean. See `docs/security-review.md` for details.
-
-## Disclosure Policy
-
-We follow coordinated disclosure. Once a fix is released, we will publish a GitHub Security Advisory describing the vulnerability and remediation.
-
-## Acknowledgements
-
-WDMWD thanks all security researchers who responsibly disclose issues.
+The AI model must not be treated as a security boundary. Validate tool inputs and outputs in application code.

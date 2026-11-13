@@ -1,76 +1,93 @@
-# Evidence
+# Evidence Model
 
-Evidence is the atom of verifiable truth. Every factual claim in a finding must be traceable to at least one evidence entry.
+WDMWD separates retrieved data from the conclusions the agent draws from it. The purpose of the evidence model is to make an investigation inspectable and to distinguish direct observations from interpretation.
 
----
+## Claim classifications
 
-## Structure
+The agent uses three classifications:
 
-```typescript
-interface Evidence {
-  id: string;                  // "ev_" + sha256(content)[0:16]
-  chainId: number;             // 8453 for Base
-  type: "transfer" | "receipt" | "block" | "balance" | "log" | "metadata";
-  classification: "confirmed" | "inferred" | "unknown";
-  transactionHash?: string;
-  blockNumber?: number;
-  blockTimestamp?: string;
-  addresses?: string[];
-  contractAddress?: string;
-  data: Record<string, unknown>;  // type-specific
-  source: string;                  // "alchemy:8453" or "rpc:8453"
-  retrievedAt: string;             // ISO timestamp
-  investigationId?: string;
+| Classification | Meaning | How to read it |
+|---|---|---|
+| `CONFIRMED` | Directly supported by retrieved onchain or provider data. | The cited source supports the stated fact within the limits of that source. |
+| `INFERRED` | A reasoned interpretation of available evidence. | Plausible, but not directly proven by the available records. |
+| `UNKNOWN` | The available data does not establish the answer. | The system should state the uncertainty rather than guess. |
+
+These labels describe the strength of the available evidence, not a guarantee that an external provider is infallible. A confirmed observation may still be incomplete if the underlying data source has limited coverage.
+
+## Findings
+
+Wallet investigation findings are structured with fields including:
+
+- `id`: finding identifier.
+- `title`: short finding title.
+- `explanation`: readable explanation.
+- `classification`: `CONFIRMED`, `INFERRED`, or `UNKNOWN`.
+- `evidenceIds`: evidence records supporting the finding.
+- `limitations`: constraints or caveats relevant to the finding.
+
+Findings should identify their supporting evidence. An inference should not be presented as a direct onchain fact.
+
+## Evidence records
+
+The wallet investigation response exposes evidence records with fields including:
+
+| Field | Purpose |
+|---|---|
+| `id` | Evidence identifier referenced by findings and chat events. |
+| `chainId` | Chain identifier for the source record. |
+| `type` | Kind of evidence record. |
+| `classification` | Evidence classification. |
+| `transactionHash` | Transaction associated with the evidence, when applicable. |
+| `blockNumber` | Block number, when available. |
+| `blockTimestamp` | Block timestamp, when available. |
+| `addresses` | Addresses associated with the record. |
+| `contractAddress` | Relevant contract address, when applicable. |
+| `data` | Structured source data. |
+| `source` | Provider or subsystem that supplied the record. |
+| `retrievedAt` | Time the application retrieved the record. |
+
+Some fields may be absent or empty depending on the evidence type. Consumers should render only fields that are present and should not manufacture missing transaction details.
+
+## Evidence in chat streams
+
+The chat API emits one `evidence` SSE event **per evidence item** produced by a tool. Each event carries the full frontend-ready evidence record, not just an identifier. Example:
+
+```json
+{
+  "evidence": {
+    "id": "ev_abc123",
+    "classification": "confirmed",
+    "title": "ETH Transfer",
+    "txHash": "0x...",
+    "address": "0x...",
+    "blockNumber": 12345678,
+    "timestamp": "2024-01-01T00:00:00.000Z",
+    "assetMovement": "+1.5 ETH",
+    "source": "alchemy:8453",
+    "explorerLink": "https://basescan.org/tx/0x..."
+  }
 }
 ```
 
-### IDs are content-derived
+Fields may be omitted when the underlying evidence does not support them (e.g., an evidence record without a transaction hash will not include txHash or explorerLink). Clients should render only the fields that are present.
 
-The id is `sha256(key).slice(0, 16)` where `key` is a canonical string of the identifying fields. For transfers, the key is:
+## Evidence interpretation rules
+
+1. Distinguish observed facts from inferred relationships or explanations.
+2. Preserve exact transaction hashes and addresses when showing references.
+3. Do not convert missing data into a negative claim.
+4. Do not infer wallet ownership or a person's identity from onchain interaction alone.
+5. Do not imply a transaction succeeded when the receipt indicates a revert.
+6. Do not state exact token quantities if the source data does not support an exact value.
+7. Keep source limitations visible when they materially affect the conclusion.
+
+## Explorer links
+
+For Base Mainnet, the frontend may link an address or transaction to BaseScan using:
 
 ```text
-chainId:hash:from:to:category:contractAddress:amountRaw:tokenId
+https://basescan.org/address/{address}
+https://basescan.org/tx/{transactionHash}
 ```
 
-Consequences:
-
-- Same transfer observed twice (e.g., two `getAssetTransfers` calls) gets the same ID → automatic deduplication.
-- Different transfers never collide (assuming no two distinct transfers share all those fields — extremely unlikely, but see below).
-- Evidence IDs are stable across requests and providers (as long as the underlying blockchain data is the same).
-
-Known limitation: two distinct transfers in the same transaction with identical `(from, to, category, contractAddress, amountRaw, tokenId)` produce the same evidence ID. Alchemy doesn't provide a per-transfer log index, so we can't disambiguate. In practice this is rare (identical transfers in a single tx are unusual). If it becomes a problem, add an index-based counter to the key.
-
-## Classifications
-
-Three values, per spec §6.11:
-
-- `confirmed` — directly observable in retrieved blockchain data. Example: "This wallet has 100 incoming transfers."
-- `inferred` — a reasonable interpretation of confirmed data. Example: "This address appears to be a bridge contract." (The bridge claim requires trust in our heuristic about `0x4200...` addresses; the contract-is-not-a-wallet claim is confirmed.)
-- `unknown` — the data does not establish a reliable answer. Example: "The specific token amounts in these event logs are not decoded."
-
-Every finding has a classification. Coverage findings (e.g. `f_coverage`, `f_tx_coverage`) are always unknown and carry explicit limitations. They exist to be honest about what we don't know.
-
-## Evidence → Findings
-
-`Finding.evidenceIds` references evidence by ID. The `investigate*` modules assert this at construction time — a finding without evidence (other than coverage) throws during tests.
-
-`tests/wallet/investigate.test.ts` → "every non-coverage finding references at least one evidence ID" enforces this. If you add a new investigation module, add an equivalent test.
-
-## What V1 does NOT do
-
-Being explicit about the gaps:
-
-- No log parameter decoding. A transaction with 4 event logs reports "4 logs, 1 matches ERC-20 Transfer topic" but cannot say which token, how much, to whom. This requires ABI decoding, which is future work.
-- No internal transaction tracing. Contract-mediated native ETH transfers (e.g., a contract sending ETH to a user) do not appear as separate transfers in the receipt logs. They're invisible to our current adapter.
-- No cross-transaction tracing. "Where did these funds originally come from?" requires walking through multiple transactions. This is spec §6.8 (trace module), not implemented in V1.
-- No token metadata verification. Symbols and names come from the indexer. We treat them as untrusted — a malicious token can claim symbol: "USDC". The canonical identifier is the contract address.
-
-## Why this matters for the frontend
-
-When the frontend displays a finding, it should:
-
-- Show the classification prominently (green/amber/grey for confirmed/inferred/unknown).
-- Link evidence IDs to transaction hashes and block numbers — the user can verify on `basescan.org`.
-- Never upgrade an inference into a fact in the UI. If the model says "likely a bridge", the UI shouldn't say "is a bridge".
-
-The evidence structure is designed exactly for this — every fact has a citation you can click.
+The explorer link is a convenience for independent inspection. The application should preserve the original evidence reference and must not imply that linking to an explorer independently validates the agent's interpretation.

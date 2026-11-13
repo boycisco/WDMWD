@@ -1,149 +1,215 @@
 # Deployment
 
-WDMWD runs as a single Node.js process. There is no external queue, cache, or database server to provision. The only state is a SQLite file on disk.
+WDMWD is a unified Next.js application. One application process serves the chat interface and API. Persistent application data is stored in SQLite.
 
----
+This guide covers local development and Docker-based self-hosting. Remote access is not secured by WDMWD itself; read the [Security Policy](../SECURITY.md) before exposing an instance beyond the local machine.
 
 ## Local development
 
-See the README quick start. The essentials:
+From the repository root:
 
 ```bash
 npm install
 cp .env.example .env
-# edit .env — set BASE_RPC_URL, GEMINI_API_KEY, ALCHEMY_API_KEY
+```
+
+On Windows PowerShell:
+
+```powershell
+npm install
+Copy-Item .env.example .env
+```
+
+Edit `.env` and configure the required Base data and AI provider credentials. Then apply migrations and start the development server:
+
+```bash
 npm run db:migrate
 npm run dev
 ```
 
-Dev server binds to `127.0.0.1:3000` by default. Only your machine can reach it.
+The documented default bind is `127.0.0.1:3000`.
 
-## Docker (recommended for self-hosting)
+### Testing from a phone on the same network
 
-`compose.yaml` provides a single-container deployment with a persistent named volume for the SQLite database.
+For development-only mobile testing, add the development machine's hostname or IP address to `NEXT_ALLOWED_DEV_ORIGINS`, using the format expected by `.env.example` and the Next.js configuration. This setting is for the development server. It is not a production remote-access security control.
+
+## Docker deployment
+
+The repository includes a multi-stage Dockerfile and `compose.yaml`. The Compose setup runs the application as one service and mounts persistent storage for the SQLite database.
+
+### First run
 
 ```bash
 cp .env.example .env
-# edit .env with your real keys
-docker compose up -d
+# Edit .env and add the credentials required by your chosen providers.
+docker compose up -d --build
 ```
 
-On first start, the container runs pending database migrations automatically, then starts the Next.js server.
+On container startup, the application runs pending database migrations through its Node instrumentation startup path before serving requests. Do not run an obsolete standalone migration command inside the container.
 
-Verifying it's up:
+### Verify startup
 
 ```bash
-docker compose ps         # should show "healthy"
+docker compose ps
+docker compose logs --tail=100 wdmwd
 curl http://127.0.0.1:3000/api/health
 ```
 
-Logs:
+Inspect both the container health state and the JSON response from `/api/health`. An HTTP 200 response may still contain a degraded subsystem status.
+
+### Follow logs
 
 ```bash
 docker compose logs -f wdmwd
 ```
 
-Stopping (graceful — SQLite closes cleanly on SIGTERM):
+Look for successful migration/startup messages and investigate any configuration, database, or provider errors. Do not depend on exact Next.js startup log wording or timing; these can change between versions.
+
+### Stop and restart
 
 ```bash
 docker compose stop
+docker compose start
 ```
 
-Destroying (keeps the database volume):
+A normal stop should allow the application to close its SQLite connection cleanly.
+
+### Stop and remove containers
 
 ```bash
 docker compose down
 ```
 
-Destroying everything (DELETES the SQLite database):
+This removes the containers and network but normally preserves named volumes.
+
+**Destructive operation:**
 
 ```bash
 docker compose down -v
 ```
 
-Why the port bind is `127.0.0.1:3000:3000`: Docker's port mapping can be scoped to a specific host interface. Binding to `127.0.0.1` on the host means the container is unreachable from your LAN or the internet, even though the container itself listens on `0.0.0.0` internally.
+The `-v` option removes named volumes and can delete the SQLite database and all persisted conversations. Do not use it unless you intend to erase the stored data.
 
-Why `HOST: "0.0.0.0"` inside the container: Next.js needs to listen on all interfaces inside the container's network namespace for the Docker port-forwarder to reach it. The host-side `127.0.0.1` bind is what provides network isolation.
+## Database storage and backups
 
-## Remote / VPS deployment
+The documented local database default is:
 
-Read [SECURITY.md](../SECURITY.md) before doing this. WDMWD does not ship authentication. Exposing it to the internet requires additional infrastructure.
-
-The correct pattern is:
-
-- Bind WDMWD to loopback on the host — do not change ports: `"127.0.0.1:3000:3000"` in `compose.yaml`.
-- Run a reverse proxy on the same host — Caddy, nginx, or Traefik.
-- Terminate TLS at the proxy — Let's Encrypt via Caddy is one line of config.
-- Add authentication at the proxy — HTTP Basic, OAuth proxy, mTLS. Choose one. WDMWD has no opinion.
-
-Minimal Caddy example (with HTTP Basic auth):
-
-```caddy
-wdmwd.example.com {
-  basicauth {
-    admin $2a$14$...  # generate: caddy hash-password
-  }
-  reverse_proxy 127.0.0.1:3000
-}
+```text
+file:./data/wdmwd.db
 ```
 
-Then point your DNS A/AAAA record at the VPS. Caddy handles Let's Encrypt automatically.
+The Docker configuration places the database under the container's persistent data directory. Confirm the exact `DATABASE_URL` and volume mount in `compose.yaml` before performing maintenance.
 
-Do not expose port 3000 directly from a VPS. There is no rate limit, no auth, no CSRF protection at the WDMWD layer — because it was never meant to be on the public internet without a proxy.
+### Backup using Docker Compose
 
-## Environment
-
-All configuration is via environment variables. See `.env.example` and the README for the full table.
-
-Production requirements (enforced by config validation at startup):
-
-- `NODE_ENV=production`
-- Either `BASE_RPC_URL` or `ALCHEMY_API_KEY` (for Base data)
-- Either `GEMINI_API_KEY` (if `AI_PROVIDER=gemini`) or `OPENAI_API_KEY` (if `openai`)
-
-If any required value is missing, the app will not start. This is deliberate — silent fallbacks are worse than a loud startup failure.
-
-## Database
-
-WDMWD uses SQLite via `better-sqlite3`. The file lives at `DATABASE_URL` (default `file:./data/wdmwd.db`).
-
-Backup:
+For a consistent file-level backup, stop the application first so SQLite can close and checkpoint its database files:
 
 ```bash
-docker compose exec wdmwd sh -c "sqlite3 /app/data/wdmwd.db '.backup /app/data/backup.db'"
-docker compose cp wdmwd:/app/data/backup.db ./backup.db
-docker compose exec wdmwd rm /app/data/backup.db
+docker compose stop
 ```
 
-Or simpler: `docker cp wdmwd:/app/data/wdmwd.db ./wdmwd.db` while the container is running — WAL mode means reads don't block writes, so the copy is consistent.
-
-Migration:
-
-Migrations run automatically on container start (`npx drizzle-kit migrate && node server.js`). If you're running outside Docker:
+Then copy the database from the service container. The following assumes the Compose service is named `wdmwd` and the database is `/app/data/wdmwd.db`, as described by the current deployment configuration:
 
 ```bash
-npm run db:generate   # after schema changes only — produces new SQL files
-npm run db:migrate    # applies pending migrations
+docker compose cp wdmwd:/app/data/wdmwd.db ./wdmwd-backup.db
+docker compose start
 ```
 
-Reset (destroys data):
+If the service name or container path differs in your checkout, use the values from `compose.yaml` and `DATABASE_URL`.
+
+Store backups outside the repository if they contain conversation history or other private data. Do not commit database backups.
+
+### Restore
+
+1. Stop the application with `docker compose stop`.
+2. Preserve a copy of the current database before replacing it.
+3. Copy the backup to the exact database path used by the container.
+4. Ensure file ownership and permissions allow the container process to access it.
+5. Start the application with `docker compose start`.
+6. Check `/api/health` and verify that the expected sessions are available.
+
+Do not restore a database from an incompatible schema version without first checking the migration history.
+
+## Migrations
+
+### Docker
+
+Pending migrations run automatically during application startup through the Node instrumentation path. No separate `drizzle-kit migrate` command is required in the container workflow described by the current implementation.
+
+### Local development
+
+Use the repository scripts:
 
 ```bash
-docker compose down -v
+npm run db:generate
+npm run db:migrate
 ```
+
+Run `db:generate` after making schema changes to generate migration files. Run `db:migrate` to apply pending migrations in the local environment.
+
+Before deploying a version that includes database migrations, review the migration files and make a backup if the database contains data you need to preserve.
 
 ## Updating
 
+Back up the database before an update, then pull the desired revision and rebuild:
+
 ```bash
 git pull
-docker compose build
-docker compose up -d
+docker compose up -d --build
 ```
 
-Migrations run automatically on start. No manual intervention needed unless a migration is destructive — check `drizzle/*.sql` before pulling if you care about your conversation history.
+Migrations run during container startup. Review the migration files for the revision being deployed, especially when they change or remove stored columns or tables.
+
+## Remote or VPS deployment
+
+WDMWD does not provide application-level user authentication. `REMOTE_ACCESS=true` is an explicit configuration opt-in, not a replacement for an access-control layer.
+
+For a remotely hosted instance:
+
+1. Keep the application bound to loopback on the host where possible.
+2. Publish the app only to a local reverse-proxy interface.
+3. Terminate HTTPS at the reverse proxy.
+4. Add authentication at the proxy or another trusted access-control layer.
+5. Restrict network access and keep the application and dependencies updated.
+6. Do not expose the raw application port directly to the public internet.
+
+The reverse proxy, TLS certificate, authentication, firewall, and remote-access policy are the operator's responsibility. Do not assume that enabling `REMOTE_ACCESS` configures any of them.
 
 ## Health monitoring
 
-The health check hits `GET /api/health` and expects `200` with `status: "ok"`. If you're running the container without `compose.yaml`, wire an external monitor to the same endpoint.
+Use:
 
-The health check does not hit Base or Gemini on every call — it checks configuration and does a local SQLite query. This means it stays cheap. If you want active provider checks, hit `/api/wallet/[any-valid-address]` on a schedule, but be aware it uses Alchemy quota.
+```text
+GET /api/health
+```
+
+The endpoint returns an overall status and individual subsystem checks. The API reference documents the response fields and status semantics. Monitoring should inspect the response body rather than treating HTTP 200 alone as proof that every dependency is healthy.
+
+## Troubleshooting
+
+### Container is unhealthy
+
+Inspect:
+
+```bash
+docker compose ps
+docker compose logs --tail=200 wdmwd
+```
+
+Check required environment variables, database directory permissions, migration startup output, and the health response.
+
+### Application refuses to start with a configuration error
+
+Review `.env` against `.env.example`. Check the selected `AI_PROVIDER` and the matching provider key. Also verify the Base RPC/indexing configuration required by the current config schema.
+
+### Chat requests are slow or fail
+
+Check the configured AI provider's status, quota, rate limits, and model availability. Also inspect server logs for provider errors and request timeouts. Free-tier provider limits can affect response latency; do not assume a long wait is necessarily a frontend problem.
+
+### Wallet history is incomplete
+
+WDMWD depends on its configured RPC and indexing providers and their coverage. Check provider credentials, rate limits, supported transfer types, and the requested history range. Missing indexed data is not proof that no activity occurred.
+
+### Docker daemon is unavailable
+
+Start Docker Desktop on Windows/macOS, or start the Docker service using the instructions for your Linux distribution.
