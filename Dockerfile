@@ -48,11 +48,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle.config.ts ./
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 
-# Full node_modules for drizzle-kit and better-sqlite3 (native module).
-# Standalone bundles only what the Next.js server needs; migrations
-# require drizzle-kit which isn't in the standalone tree.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
 # Persistent data volume mount point
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
@@ -61,4 +56,7 @@ EXPOSE 3000
 
 # Run migrations then start the server. Migrations are idempotent —
 # if the DB is already up to date, they no-op.
-CMD ["sh", "-c", "npx drizzle-kit migrate && exec node server.js"]
+# Migrations run inside instrumentation-node.ts (via drizzle-orm's
+# runtime migrator). The Next.js standalone bundle already contains
+# all runtime dependencies, including better-sqlite3's native binding.
+CMD ["node", "server.js"]
