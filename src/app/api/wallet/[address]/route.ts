@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * GET /api/wallet/[address]?chainId=8453&limit=100
  *

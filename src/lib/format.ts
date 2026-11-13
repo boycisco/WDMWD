@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { ToolName, EvidenceClassification } from '@/types/api';
 
 export const TOOL_DISPLAY_NAMES: Record<string, string> = {

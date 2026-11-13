@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Model interface — provider-independent abstraction (spec §8.1).
  *

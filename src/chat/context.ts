@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Context resolution — extract addresses and tx hashes from prior
  * conversation, so the model can resolve "the second one" or "that

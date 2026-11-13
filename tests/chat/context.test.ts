@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from "vitest";
 import { extractRefs, formatRefsForPrompt } from "@/chat/context";
 import type { Message } from "@/model/model";

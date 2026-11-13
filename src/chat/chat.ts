@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Chat persistence — sessions and messages backed by Drizzle + SQLite.
  *

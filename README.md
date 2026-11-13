@@ -319,7 +319,23 @@ These limitations affect what the agent can establish. An absent result must not
 
 ## License
 
-WDMWD is distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE).
+WDMWD is free and open-source software licensed under the
+**GNU Affero General Public License v3.0 only
+(AGPL-3.0-only)**.
+
+You are free to use, study, modify, and redistribute the
+software under the terms and conditions of this licence.
+
+Under Section 13 of the AGPL, if you modify WDMWD and make
+your modified version available for users to interact with
+over a network, you must provide those users with access
+to the Corresponding Source of your modified version as
+required by the licence.
+
+The complete licence is available in [`LICENSE`](LICENSE).
+
+See [`NOTICE.md`](NOTICE.md) for supplementary copyright
+and third-party licensing information.
 
 ## Contributing
 

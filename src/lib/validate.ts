@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * EVM Validation utilities for WDMWD
  * Explicitly distinguishes valid Ethereum/Base addresses and transaction hashes

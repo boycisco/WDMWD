@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 export type SystemStatus = 'ok' | 'degraded' | 'error' | 'not_configured';
 
 export type ToolName =

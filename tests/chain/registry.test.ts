@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from "vitest";
 import { UnsupportedError } from "@/core/errors";
 import { addressUrl, txUrl } from "@/chain/chain";

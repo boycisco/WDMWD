@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * OpenAI adapter — implements `Model` using the official SDK.
  *

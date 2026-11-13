@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Agent tools — the single source of truth for what the model can call.
  *

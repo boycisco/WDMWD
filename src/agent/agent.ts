@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Agent facade — assembles the model, prompt, and loop.
  *

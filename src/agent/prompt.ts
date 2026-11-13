@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * System prompt — establishes the agent's role, constraints, and
  * evidence-first behaviour.

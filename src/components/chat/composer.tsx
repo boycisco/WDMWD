@@ -1,4 +1,5 @@
 'use client';
+// SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useRef, useEffect, useState } from 'react';
 import { ArrowUp, Square } from 'lucide-react';

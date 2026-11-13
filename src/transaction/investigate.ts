@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Transaction investigation — deterministic fact extraction for a single
  * onchain transaction (spec §6.7).

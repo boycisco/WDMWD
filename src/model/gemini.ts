@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /**
  * Gemini adapter — implements `Model` using @google/genai (spec §8.1).
  *
