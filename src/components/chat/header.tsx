@@ -18,12 +18,7 @@ export function Header({ onToggleHistory, onOpenSettings }: HeaderProps) {
       
       <button
         type="button"
-        onClick={() => {
-          console.log('=== MENU BUTTON CLICKED ===');
-          onToggleHistory();
-        }}
-        onPointerDown={() => console.log('=== MENU POINTERDOWN ===')}
-        onTouchStart={() => console.log('=== MENU TOUCHSTART ===')}
+        onClick={onToggleHistory}
         className="relative z-40 w-12 h-12 rounded-full bg-[#1C2938] flex items-center justify-center text-[#A0AEC0] active:bg-[#253343] transition-colors cursor-pointer pointer-events-auto touch-manipulation"
         aria-label="Toggle History"
       >
@@ -34,12 +29,7 @@ export function Header({ onToggleHistory, onOpenSettings }: HeaderProps) {
 
       <button
         type="button"
-        onClick={() => {
-          console.log('=== SETTINGS BUTTON CLICKED ===');
-          onOpenSettings();
-        }}
-        onPointerDown={() => console.log('=== SETTINGS POINTERDOWN ===')}
-        onTouchStart={() => console.log('=== SETTINGS TOUCHSTART ===')}
+        onClick={onOpenSettings}
         className="relative z-40 w-12 h-12 rounded-full bg-[#1C2938] flex items-center justify-center text-[#A0AEC0] active:bg-[#253343] transition-colors cursor-pointer pointer-events-auto touch-manipulation"
         aria-label="Open Settings"
       >
